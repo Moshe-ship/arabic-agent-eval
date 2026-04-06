@@ -1,0 +1,773 @@
+"""Arabic function-calling evaluation dataset.
+
+50+ evaluation items across 6 categories with real Arabic text and dialect variants.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field, asdict
+from typing import Any
+
+
+@dataclass
+class ExpectedCall:
+    """Expected function call."""
+
+    function: str
+    arguments: dict[str, Any]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ExpectedCall:
+        return cls(function=data["function"], arguments=data["arguments"])
+
+
+@dataclass
+class EvalItem:
+    """A single evaluation item."""
+
+    id: str
+    category: str
+    instruction: str
+    dialect: str  # msa, egyptian, gulf, levantine, maghrebi
+    available_functions: list[str]  # function names available to the agent
+    expected_calls: list[ExpectedCall]
+    difficulty: str  # easy, medium, hard
+    error_response: dict | None = None  # for error_recovery category
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        return d
+
+    @classmethod
+    def from_dict(cls, data: dict) -> EvalItem:
+        calls = [ExpectedCall.from_dict(c) for c in data.get("expected_calls", [])]
+        return cls(
+            id=data["id"],
+            category=data["category"],
+            instruction=data["instruction"],
+            dialect=data["dialect"],
+            available_functions=data["available_functions"],
+            expected_calls=calls,
+            difficulty=data["difficulty"],
+            error_response=data.get("error_response"),
+        )
+
+
+# ============================================================================
+# Category 1: Simple Function Calling (بسيط)
+# ============================================================================
+
+SIMPLE: list[dict] = [
+    {
+        "id": "simple_001",
+        "category": "simple_function_calling",
+        "instruction": "ابحث عن رحلات من الرياض إلى جدة يوم الخميس",
+        "dialect": "msa",
+        "available_functions": ["search_flights", "book_hotel", "get_weather"],
+        "expected_calls": [
+            {"function": "search_flights", "arguments": {"from_city": "الرياض", "to_city": "جدة", "date": "الخميس"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_002",
+        "category": "simple_function_calling",
+        "instruction": "كم درجة الحرارة في دبي اليوم؟",
+        "dialect": "msa",
+        "available_functions": ["get_weather", "get_time", "get_news"],
+        "expected_calls": [
+            {"function": "get_weather", "arguments": {"city": "دبي"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_003",
+        "category": "simple_function_calling",
+        "instruction": "احجز فندق في مكة من يوم ١٥ رمضان إلى ٢٠ رمضان لشخصين",
+        "dialect": "msa",
+        "available_functions": ["book_hotel", "search_flights", "search_restaurants"],
+        "expected_calls": [
+            {"function": "book_hotel", "arguments": {"city": "مكة", "check_in": "١٥ رمضان", "check_out": "٢٠ رمضان", "guests": 2}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_004",
+        "category": "simple_function_calling",
+        "instruction": "أريد أعرف مواقيت الصلاة في المدينة المنورة",
+        "dialect": "msa",
+        "available_functions": ["get_prayer_times", "get_time", "get_weather"],
+        "expected_calls": [
+            {"function": "get_prayer_times", "arguments": {"city": "المدينة المنورة"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_005",
+        "category": "simple_function_calling",
+        "instruction": "حوّل لي ألف دولار إلى ريال سعودي",
+        "dialect": "msa",
+        "available_functions": ["convert_currency", "send_money", "get_stock_price"],
+        "expected_calls": [
+            {"function": "convert_currency", "arguments": {"amount": 1000, "from_currency": "USD", "to_currency": "SAR"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_006",
+        "category": "simple_function_calling",
+        "instruction": "ابحث لي عن آية فيها كلمة الصبر",
+        "dialect": "msa",
+        "available_functions": ["find_quran_verse", "translate_text", "get_news"],
+        "expected_calls": [
+            {"function": "find_quran_verse", "arguments": {"query": "الصبر"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_007",
+        "category": "simple_function_calling",
+        "instruction": "كم سعر سهم أرامكو في تداول؟",
+        "dialect": "msa",
+        "available_functions": ["get_stock_price", "convert_currency", "get_news"],
+        "expected_calls": [
+            {"function": "get_stock_price", "arguments": {"symbol": "2222", "market": "tadawul"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "simple_008",
+        "category": "simple_function_calling",
+        "instruction": "ذكّرني أدفع فاتورة الكهرباء بكرة الساعة عشر الصبح",
+        "dialect": "msa",
+        "available_functions": ["set_reminder", "schedule_meeting", "send_message"],
+        "expected_calls": [
+            {"function": "set_reminder", "arguments": {"message": "دفع فاتورة الكهرباء", "datetime": "غداً الساعة 10 صباحاً"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "simple_009",
+        "category": "simple_function_calling",
+        "instruction": "احسب لي زكاة مبلغ خمسين ألف ريال نقداً",
+        "dialect": "msa",
+        "available_functions": ["calculate_zakat", "convert_currency", "send_money"],
+        "expected_calls": [
+            {"function": "calculate_zakat", "arguments": {"amount": 50000, "currency": "SAR", "type": "cash"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "simple_010",
+        "category": "simple_function_calling",
+        "instruction": "ابحث عن وظائف مهندس برمجيات في الرياض دوام كامل",
+        "dialect": "msa",
+        "available_functions": ["search_jobs", "schedule_meeting", "send_message"],
+        "expected_calls": [
+            {"function": "search_jobs", "arguments": {"title": "مهندس برمجيات", "city": "الرياض", "type": "full-time"}}
+        ],
+        "difficulty": "easy",
+    },
+]
+
+# ============================================================================
+# Category 2: Parameter Extraction (استخراج المعاملات)
+# ============================================================================
+
+PARAMETER_EXTRACTION: list[dict] = [
+    {
+        "id": "param_001",
+        "category": "parameter_extraction",
+        "instruction": "أرسل رسالة لأحمد على الواتساب تقول له مبروك الترقية",
+        "dialect": "msa",
+        "available_functions": ["send_message", "schedule_meeting"],
+        "expected_calls": [
+            {"function": "send_message", "arguments": {"recipient": "أحمد", "platform": "whatsapp", "message": "مبروك الترقية"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "param_002",
+        "category": "parameter_extraction",
+        "instruction": "اطلب لي شاورما ودجاج مشوي من مطعم البيك توصيل لحي العليا",
+        "dialect": "msa",
+        "available_functions": ["order_food", "search_restaurants", "book_table"],
+        "expected_calls": [
+            {"function": "order_food", "arguments": {"restaurant": "البيك", "items": "شاورما ودجاج مشوي", "address": "حي العليا"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "param_003",
+        "category": "parameter_extraction",
+        "instruction": "رتّب لي اجتماع مع فريق التسويق يوم الأحد الساعة ٢ الظهر عنوانه مراجعة الحملة الإعلانية",
+        "dialect": "msa",
+        "available_functions": ["schedule_meeting", "set_reminder", "send_message"],
+        "expected_calls": [
+            {"function": "schedule_meeting", "arguments": {"title": "مراجعة الحملة الإعلانية", "date": "الأحد", "time": "٢ الظهر", "participants": "فريق التسويق"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "param_004",
+        "category": "parameter_extraction",
+        "instruction": "حوّل ثلاثمئة يورو لليرة التركية",
+        "dialect": "msa",
+        "available_functions": ["convert_currency", "send_money"],
+        "expected_calls": [
+            {"function": "convert_currency", "arguments": {"amount": 300, "from_currency": "EUR", "to_currency": "TRY"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "param_005",
+        "category": "parameter_extraction",
+        "instruction": "احجز طاولة لأربعة أشخاص في مطعم نصرت يوم الجمعة الساعة ٨ المساء",
+        "dialect": "msa",
+        "available_functions": ["book_table", "search_restaurants", "order_food"],
+        "expected_calls": [
+            {"function": "book_table", "arguments": {"restaurant": "نصرت", "date": "الجمعة", "time": "٨ المساء", "guests": 4}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "param_006",
+        "category": "parameter_extraction",
+        "instruction": "حوّل لأخوي محمد مبلغ خمسمئة ريال",
+        "dialect": "msa",
+        "available_functions": ["send_money", "convert_currency", "send_message"],
+        "expected_calls": [
+            {"function": "send_money", "arguments": {"recipient": "محمد", "amount": 500, "currency": "SAR"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "param_007",
+        "category": "parameter_extraction",
+        "instruction": "ترجم لي الجملة التالية من العربي للإنجليزي: السلام عليكم كيف حالكم",
+        "dialect": "msa",
+        "available_functions": ["translate_text", "send_message"],
+        "expected_calls": [
+            {"function": "translate_text", "arguments": {"text": "السلام عليكم كيف حالكم", "from_lang": "ar", "to_lang": "en"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "param_008",
+        "category": "parameter_extraction",
+        "instruction": "احجز لي سيارة من المطار إلى فندق هيلتون",
+        "dialect": "msa",
+        "available_functions": ["book_car", "get_traffic", "book_hotel"],
+        "expected_calls": [
+            {"function": "book_car", "arguments": {"pickup": "المطار", "destination": "فندق هيلتون", "type": "ride"}}
+        ],
+        "difficulty": "easy",
+    },
+]
+
+# ============================================================================
+# Category 3: Multi-Step Reasoning (تفكير متعدد الخطوات)
+# ============================================================================
+
+MULTI_STEP: list[dict] = [
+    {
+        "id": "multi_001",
+        "category": "multi_step",
+        "instruction": "احجز لي طاولة في أفضل مطعم في الرياض ثم أرسل الموقع لزوجتي سارة على الواتساب",
+        "dialect": "msa",
+        "available_functions": ["search_restaurants", "book_table", "send_message"],
+        "expected_calls": [
+            {"function": "search_restaurants", "arguments": {"city": "الرياض"}},
+            {"function": "book_table", "arguments": {"restaurant": "*", "guests": 2}},
+            {"function": "send_message", "arguments": {"recipient": "سارة", "platform": "whatsapp"}},
+        ],
+        "difficulty": "hard",
+    },
+    {
+        "id": "multi_002",
+        "category": "multi_step",
+        "instruction": "شوف لي الطقس في إسطنبول وإذا حلو احجز لي رحلة من جدة",
+        "dialect": "msa",
+        "available_functions": ["get_weather", "search_flights", "book_hotel"],
+        "expected_calls": [
+            {"function": "get_weather", "arguments": {"city": "إسطنبول"}},
+            {"function": "search_flights", "arguments": {"from_city": "جدة", "to_city": "إسطنبول"}},
+        ],
+        "difficulty": "hard",
+    },
+    {
+        "id": "multi_003",
+        "category": "multi_step",
+        "instruction": "احسب زكاة مالي اللي هو عشرين ألف دولار وحوّلها لريال سعودي",
+        "dialect": "msa",
+        "available_functions": ["calculate_zakat", "convert_currency"],
+        "expected_calls": [
+            {"function": "calculate_zakat", "arguments": {"amount": 20000, "currency": "USD"}},
+            {"function": "convert_currency", "arguments": {"from_currency": "USD", "to_currency": "SAR"}},
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "multi_004",
+        "category": "multi_step",
+        "instruction": "ابحث عن مطعم سمك في جدة ثم اطلب لي سمك مشوي وروبيان توصيل للبيت",
+        "dialect": "msa",
+        "available_functions": ["search_restaurants", "order_food", "get_traffic"],
+        "expected_calls": [
+            {"function": "search_restaurants", "arguments": {"city": "جدة", "cuisine": "سمك"}},
+            {"function": "order_food", "arguments": {"items": "سمك مشوي وروبيان"}},
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "multi_005",
+        "category": "multi_step",
+        "instruction": "شوف حالة المرور من البيت للمكتب وإذا زحمة رتّب لي اجتماع أونلاين بدل الحضوري",
+        "dialect": "msa",
+        "available_functions": ["get_traffic", "schedule_meeting", "send_message"],
+        "expected_calls": [
+            {"function": "get_traffic", "arguments": {"from_location": "البيت", "to_location": "المكتب"}},
+            {"function": "schedule_meeting", "arguments": {"title": "اجتماع أونلاين"}},
+        ],
+        "difficulty": "hard",
+    },
+    {
+        "id": "multi_006",
+        "category": "multi_step",
+        "instruction": "ابحث لي عن رحلات من الدمام لدبي يوم السبت واحجز فندق هناك ليلتين",
+        "dialect": "msa",
+        "available_functions": ["search_flights", "book_hotel", "get_weather"],
+        "expected_calls": [
+            {"function": "search_flights", "arguments": {"from_city": "الدمام", "to_city": "دبي", "date": "السبت"}},
+            {"function": "book_hotel", "arguments": {"city": "دبي"}},
+        ],
+        "difficulty": "medium",
+    },
+]
+
+# ============================================================================
+# Category 4: Dialect Handling (معالجة اللهجات)
+# ============================================================================
+
+DIALECT: list[dict] = [
+    # Gulf dialect
+    {
+        "id": "dialect_001",
+        "category": "dialect_handling",
+        "instruction": "ابي أحجز فندق في دبي بكرة",
+        "dialect": "gulf",
+        "available_functions": ["book_hotel", "search_flights", "get_weather"],
+        "expected_calls": [
+            {"function": "book_hotel", "arguments": {"city": "دبي", "check_in": "غداً"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_002",
+        "category": "dialect_handling",
+        "instruction": "وين أحسن مطعم كبسة في الرياض؟ ابي أحجز فيه",
+        "dialect": "gulf",
+        "available_functions": ["search_restaurants", "book_table"],
+        "expected_calls": [
+            {"function": "search_restaurants", "arguments": {"city": "الرياض", "cuisine": "كبسة"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_003",
+        "category": "dialect_handling",
+        "instruction": "يا خوي كم الساعة الحين في لندن؟",
+        "dialect": "gulf",
+        "available_functions": ["get_time", "get_weather", "convert_currency"],
+        "expected_calls": [
+            {"function": "get_time", "arguments": {"city": "لندن"}}
+        ],
+        "difficulty": "easy",
+    },
+    # Egyptian dialect
+    {
+        "id": "dialect_004",
+        "category": "dialect_handling",
+        "instruction": "عايز أبعت رسالة لمحمد على الواتس أقوله تعالى بكره الساعة ٥",
+        "dialect": "egyptian",
+        "available_functions": ["send_message", "schedule_meeting", "set_reminder"],
+        "expected_calls": [
+            {"function": "send_message", "arguments": {"recipient": "محمد", "platform": "whatsapp", "message": "تعالى بكره الساعة ٥"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "dialect_005",
+        "category": "dialect_handling",
+        "instruction": "عايز أعرف الجو عامل إيه في شرم الشيخ",
+        "dialect": "egyptian",
+        "available_functions": ["get_weather", "search_flights", "book_hotel"],
+        "expected_calls": [
+            {"function": "get_weather", "arguments": {"city": "شرم الشيخ"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_006",
+        "category": "dialect_handling",
+        "instruction": "اطلب لي كشري من أبو طارق يوصل لمصر الجديدة",
+        "dialect": "egyptian",
+        "available_functions": ["order_food", "search_restaurants", "get_traffic"],
+        "expected_calls": [
+            {"function": "order_food", "arguments": {"restaurant": "أبو طارق", "items": "كشري", "address": "مصر الجديدة"}}
+        ],
+        "difficulty": "easy",
+    },
+    # Levantine dialect
+    {
+        "id": "dialect_007",
+        "category": "dialect_handling",
+        "instruction": "بدي احجز تكسي من المطار لع الفندق",
+        "dialect": "levantine",
+        "available_functions": ["book_car", "get_traffic", "book_hotel"],
+        "expected_calls": [
+            {"function": "book_car", "arguments": {"pickup": "المطار", "destination": "الفندق", "type": "ride"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_008",
+        "category": "dialect_handling",
+        "instruction": "قديش الوقت هلأ بطوكيو؟",
+        "dialect": "levantine",
+        "available_functions": ["get_time", "get_weather"],
+        "expected_calls": [
+            {"function": "get_time", "arguments": {"city": "طوكيو"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_009",
+        "category": "dialect_handling",
+        "instruction": "بدي فتّش عن شغل مبرمج بعمّان عن بعد",
+        "dialect": "levantine",
+        "available_functions": ["search_jobs", "send_message"],
+        "expected_calls": [
+            {"function": "search_jobs", "arguments": {"title": "مبرمج", "city": "عمّان", "type": "remote"}}
+        ],
+        "difficulty": "medium",
+    },
+    # Maghrebi dialect
+    {
+        "id": "dialect_010",
+        "category": "dialect_handling",
+        "instruction": "بغيت نشوف أخبار الرياضة في المغرب",
+        "dialect": "maghrebi",
+        "available_functions": ["get_news", "get_weather", "search_jobs"],
+        "expected_calls": [
+            {"function": "get_news", "arguments": {"category": "sports", "country": "MA"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_011",
+        "category": "dialect_handling",
+        "instruction": "بغيت نحوّل ميتين درهم مغربي ليورو",
+        "dialect": "maghrebi",
+        "available_functions": ["convert_currency", "send_money"],
+        "expected_calls": [
+            {"function": "convert_currency", "arguments": {"amount": 200, "from_currency": "MAD", "to_currency": "EUR"}}
+        ],
+        "difficulty": "easy",
+    },
+]
+
+# ============================================================================
+# Category 5: Tool Selection (اختيار الأداة)
+# ============================================================================
+
+TOOL_SELECTION: list[dict] = [
+    {
+        "id": "select_001",
+        "category": "tool_selection",
+        "instruction": "كم الساعة في طوكيو الحين؟",
+        "dialect": "gulf",
+        "available_functions": [
+            "get_time", "get_weather", "search_flights", "book_hotel",
+            "send_message", "get_news", "convert_currency", "search_restaurants",
+            "order_food", "get_traffic",
+        ],
+        "expected_calls": [
+            {"function": "get_time", "arguments": {"city": "طوكيو"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "select_002",
+        "category": "tool_selection",
+        "instruction": "ودي أعرف كم الزكاة على مئة ألف ريال ذهب",
+        "dialect": "gulf",
+        "available_functions": [
+            "calculate_zakat", "convert_currency", "get_stock_price",
+            "send_money", "find_quran_verse", "get_news",
+            "search_jobs", "translate_text", "set_reminder", "get_weather",
+        ],
+        "expected_calls": [
+            {"function": "calculate_zakat", "arguments": {"amount": 100000, "currency": "SAR", "type": "gold"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "select_003",
+        "category": "tool_selection",
+        "instruction": "ابحث لي عن آية تتكلم عن الرحمة في سورة الفاتحة",
+        "dialect": "msa",
+        "available_functions": [
+            "find_quran_verse", "translate_text", "get_news",
+            "search_jobs", "get_weather", "book_hotel",
+            "send_message", "calculate_zakat", "get_stock_price", "order_food",
+        ],
+        "expected_calls": [
+            {"function": "find_quran_verse", "arguments": {"query": "الرحمة", "surah": 1}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "select_004",
+        "category": "tool_selection",
+        "instruction": "شوف لي حالة التأشيرة رقم الطلب ABC123 جواز سفر رقم P987654",
+        "dialect": "gulf",
+        "available_functions": [
+            "check_visa_status", "search_flights", "book_hotel",
+            "get_weather", "send_message", "get_news",
+            "convert_currency", "translate_text", "get_time", "get_traffic",
+        ],
+        "expected_calls": [
+            {"function": "check_visa_status", "arguments": {"application_id": "ABC123", "passport_number": "P987654"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "select_005",
+        "category": "tool_selection",
+        "instruction": "طيب ورّني أخبار التقنية",
+        "dialect": "gulf",
+        "available_functions": [
+            "get_news", "search_jobs", "get_stock_price",
+            "translate_text", "get_weather", "search_flights",
+            "book_hotel", "send_message", "get_time", "find_quran_verse",
+        ],
+        "expected_calls": [
+            {"function": "get_news", "arguments": {"category": "technology"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "select_006",
+        "category": "tool_selection",
+        "instruction": "وش حالة المرور من حي النسيم لحي العليا؟",
+        "dialect": "gulf",
+        "available_functions": [
+            "get_traffic", "book_car", "get_weather",
+            "search_restaurants", "get_time", "send_message",
+            "search_flights", "book_hotel", "order_food", "set_reminder",
+        ],
+        "expected_calls": [
+            {"function": "get_traffic", "arguments": {"from_location": "حي النسيم", "to_location": "حي العليا"}}
+        ],
+        "difficulty": "easy",
+    },
+]
+
+# ============================================================================
+# Category 6: Error Recovery (معالجة الأخطاء)
+# ============================================================================
+
+ERROR_RECOVERY: list[dict] = [
+    {
+        "id": "error_001",
+        "category": "error_recovery",
+        "instruction": "أرسل رسالة لخالد على التلغرام",
+        "dialect": "msa",
+        "available_functions": ["send_message"],
+        "expected_calls": [
+            {"function": "send_message", "arguments": {"recipient": "خالد", "platform": "telegram", "message": ""}}
+        ],
+        "error_response": {"error": "محتوى الرسالة مطلوب", "code": "MISSING_FIELD"},
+        "difficulty": "easy",
+    },
+    {
+        "id": "error_002",
+        "category": "error_recovery",
+        "instruction": "احجز لي رحلة من القمر إلى المريخ",
+        "dialect": "msa",
+        "available_functions": ["search_flights", "book_hotel"],
+        "expected_calls": [
+            {"function": "search_flights", "arguments": {"from_city": "القمر", "to_city": "المريخ"}}
+        ],
+        "error_response": {"error": "المدينة غير موجودة", "code": "INVALID_CITY"},
+        "difficulty": "easy",
+    },
+    {
+        "id": "error_003",
+        "category": "error_recovery",
+        "instruction": "حوّل عشر ملايين دولار لزوجتي أمل",
+        "dialect": "msa",
+        "available_functions": ["send_money", "convert_currency"],
+        "expected_calls": [
+            {"function": "send_money", "arguments": {"recipient": "أمل", "amount": 10000000, "currency": "USD"}}
+        ],
+        "error_response": {"error": "المبلغ يتجاوز الحد المسموح", "code": "AMOUNT_EXCEEDED"},
+        "difficulty": "medium",
+    },
+    {
+        "id": "error_004",
+        "category": "error_recovery",
+        "instruction": "شوف سعر سهم شركة أبجد في تداول",
+        "dialect": "msa",
+        "available_functions": ["get_stock_price", "get_news"],
+        "expected_calls": [
+            {"function": "get_stock_price", "arguments": {"symbol": "أبجد", "market": "tadawul"}}
+        ],
+        "error_response": {"error": "الرمز غير موجود في السوق", "code": "SYMBOL_NOT_FOUND"},
+        "difficulty": "easy",
+    },
+    {
+        "id": "error_005",
+        "category": "error_recovery",
+        "instruction": "شوف حالة تأشيرتي رقم الطلب XYZ",
+        "dialect": "msa",
+        "available_functions": ["check_visa_status"],
+        "expected_calls": [
+            {"function": "check_visa_status", "arguments": {"application_id": "XYZ"}}
+        ],
+        "error_response": {"error": "رقم جواز السفر مطلوب", "code": "MISSING_FIELD"},
+        "difficulty": "easy",
+    },
+    {
+        "id": "error_006",
+        "category": "error_recovery",
+        "instruction": "اطلب بيتزا من مطعم بيتزا الملك توصيل لحي السلام",
+        "dialect": "msa",
+        "available_functions": ["order_food"],
+        "expected_calls": [
+            {"function": "order_food", "arguments": {"restaurant": "بيتزا الملك", "items": "بيتزا", "address": "حي السلام"}}
+        ],
+        "error_response": {"error": "المطعم مغلق حالياً", "code": "RESTAURANT_CLOSED"},
+        "difficulty": "easy",
+    },
+]
+
+
+# ============================================================================
+# Additional items to reach 51+ total
+# ============================================================================
+
+ADDITIONAL: list[dict] = [
+    {
+        "id": "param_009",
+        "category": "parameter_extraction",
+        "instruction": "أرسل لخالتي فاطمة إيميل تقول فيه كل عام وأنتم بخير",
+        "dialect": "msa",
+        "available_functions": ["send_message", "set_reminder"],
+        "expected_calls": [
+            {"function": "send_message", "arguments": {"recipient": "فاطمة", "platform": "email", "message": "كل عام وأنتم بخير"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "dialect_012",
+        "category": "dialect_handling",
+        "instruction": "يا زلمة وين أقرب مسجد من هون؟ بدي أعرف مواعيد الصلاة",
+        "dialect": "levantine",
+        "available_functions": ["get_prayer_times", "get_traffic", "search_restaurants"],
+        "expected_calls": [
+            {"function": "get_prayer_times", "arguments": {"city": "*"}}
+        ],
+        "difficulty": "medium",
+    },
+    {
+        "id": "select_007",
+        "category": "tool_selection",
+        "instruction": "ابي أعرف كم سعر الدولار مقابل الريال",
+        "dialect": "gulf",
+        "available_functions": [
+            "convert_currency", "get_stock_price", "send_money",
+            "get_news", "search_flights", "book_hotel",
+            "get_weather", "calculate_zakat", "get_time", "order_food",
+        ],
+        "expected_calls": [
+            {"function": "convert_currency", "arguments": {"amount": 1, "from_currency": "USD", "to_currency": "SAR"}}
+        ],
+        "difficulty": "easy",
+    },
+    {
+        "id": "multi_007",
+        "category": "multi_step",
+        "instruction": "شوف أخبار الرياضة وأرسلها لأخوي عمر على الواتساب",
+        "dialect": "gulf",
+        "available_functions": ["get_news", "send_message", "translate_text"],
+        "expected_calls": [
+            {"function": "get_news", "arguments": {"category": "sports"}},
+            {"function": "send_message", "arguments": {"recipient": "عمر", "platform": "whatsapp"}},
+        ],
+        "difficulty": "medium",
+    },
+]
+
+
+ALL_ITEMS: list[dict] = SIMPLE + PARAMETER_EXTRACTION + MULTI_STEP + DIALECT + TOOL_SELECTION + ERROR_RECOVERY + ADDITIONAL
+
+CATEGORIES = {
+    "simple_function_calling": {"name_ar": "استدعاء بسيط", "weight": 0.20},
+    "parameter_extraction": {"name_ar": "استخراج المعاملات", "weight": 0.20},
+    "multi_step": {"name_ar": "تفكير متعدد الخطوات", "weight": 0.20},
+    "dialect_handling": {"name_ar": "معالجة اللهجات", "weight": 0.15},
+    "tool_selection": {"name_ar": "اختيار الأداة", "weight": 0.15},
+    "error_recovery": {"name_ar": "معالجة الأخطاء", "weight": 0.10},
+}
+
+DIALECTS = ["msa", "egyptian", "gulf", "levantine", "maghrebi"]
+
+
+class Dataset:
+    """Arabic function-calling evaluation dataset."""
+
+    def __init__(self, items: list[dict] | None = None):
+        raw = items or ALL_ITEMS
+        self.items = [EvalItem.from_dict(item) for item in raw]
+
+    def by_category(self, category: str) -> list[EvalItem]:
+        return [item for item in self.items if item.category == category]
+
+    def by_dialect(self, dialect: str) -> list[EvalItem]:
+        return [item for item in self.items if item.dialect == dialect]
+
+    def by_difficulty(self, difficulty: str) -> list[EvalItem]:
+        return [item for item in self.items if item.difficulty == difficulty]
+
+    def categories(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in self.items:
+            counts[item.category] = counts.get(item.category, 0) + 1
+        return counts
+
+    def dialects(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for item in self.items:
+            counts[item.dialect] = counts.get(item.dialect, 0) + 1
+        return counts
+
+    def subset(self, n: int = 10) -> list[EvalItem]:
+        """Get a balanced subset for quick evaluation."""
+        result = []
+        cats = list(CATEGORIES.keys())
+        per_cat = max(1, n // len(cats))
+        for cat in cats:
+            cat_items = self.by_category(cat)
+            result.extend(cat_items[:per_cat])
+        return result[:n]
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def __iter__(self):
+        return iter(self.items)
