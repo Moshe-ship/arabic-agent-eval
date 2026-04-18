@@ -1,0 +1,73 @@
+{
+  "provider": "openrouter",
+  "model": "nousresearch/hermes-4-70b",
+  "overall_score": 0.724,
+  "overall_grade": "C",
+  "total_items": 51,
+  "errors": 0,
+  "categories": [
+    {
+      "category": "simple_function_calling",
+      "name_ar": "استدعاء بسيط",
+      "count": 10,
+      "avg_function_selection": 0.9,
+      "avg_argument_accuracy": 0.83,
+      "avg_arabic_preservation": 0.95,
+      "avg_total": 0.87,
+      "weight": 0.2
+    },
+    {
+      "category": "parameter_extraction",
+      "name_ar": "استخراج المعاملات",
+      "count": 9,
+      "avg_function_selection": 0.89,
+      "avg_argument_accuracy": 0.72,
+      "avg_arabic_preservation": 0.78,
+      "avg_total": 0.8,
+      "weight": 0.2
+    },
+    {
+      "category": "multi_step",
+      "name_ar": "تفكير متعدد الخطوات",
+      "count": 7,
+      "avg_function_selection": 0.71,
+      "avg_argument_accuracy": 0.58,
+      "avg_arabic_preservation": 0.71,
+      "avg_total": 0.65,
+      "weight": 0.2
+    },
+    {
+      "category": "dialect_handling",
+      "name_ar": "معالجة اللهجات",
+      "count": 12,
+      "avg_function_selection": 0.67,
+      "avg_argument_accuracy": 0.55,
+      "avg_arabic_preservation": 0.75,
+      "avg_dialect_understanding": 0.67,
+      "avg_total": 0.64,
+      "weight": 0.15
+    },
+    {
+      "category": "tool_selection",
+      "name_ar": "اختيار الأداة",
+      "count": 7,
+      "avg_function_selection": 0.86,
+      "avg_argument_accuracy": 0.71,
+      "avg_arabic_preservation": 0.86,
+      "avg_total": 0.81,
+      "weight": 0.15
+    },
+    {
+      "category": "error_recovery",
+      "name_ar": "معالجة الأخطاء",
+      "count": 6,
+      "avg_function_selection": 0.67,
+      "avg_argument_accuracy": 0.5,
+      "avg_arabic_preservation": 0.83,
+      "avg_error_handling": 0.67,
+      "avg_total": 0.67,
+      "weight": 0.1
+    }
+  ],
+  "_note": "This is an illustrative sample only. Numbers are synthetic for README screenshots and CI smoke tests. Run `aae run --json-output` against a real provider for actual scores."
+}
