@@ -2,7 +2,7 @@
 
 **The first Arabic function-calling benchmark**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE) [![Data: CC-BY-4.0](https://img.shields.io/badge/data-CC--BY--4.0-green.svg)](data/LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-green.svg)](https://python.org)
 
 > Because Arabic agents deserve evaluation too.
@@ -105,6 +105,8 @@ Overall score = weighted average across all 6 categories.
 | Cohere | command-r-plus |
 | Together | Qwen2.5-72B |
 | Fireworks | Qwen2.5-72B |
+| **OpenRouter** | nousresearch/hermes-4-70b |
+| **Hermes** (direct) | NousResearch/Hermes-4-70B |
 
 ## As a Library
 
@@ -148,10 +150,34 @@ aae dataset
 
 API keys are stored in `~/.aae/config.json` with `0600` permissions. Environment variables are the recommended way to provide keys in CI.
 
+## Documentation
+
+- [Schema](docs/schema.md) — `EvalItem`, `ExpectedCall`, function registry
+- [Grading](docs/grading.md) — canonical structured-call comparison, Arabic normalization, per-category weighting
+- [Related work](docs/related_work.md) — positioning vs BFCL, MADAR, Habibi, Hermes-FC, OALL
+- [Baselines](docs/baselines.md) — template + published runs
+- [Dataset card](dataset_card.md) — HF-style, YAML frontmatter, splits
+
+## Related projects
+
+- [**mtg**](https://github.com/Moshe-ship/mtg) — Morphological Type Guards — a JSON Schema extension for multilingual tool-call arguments. Uses this benchmark as a diagnostic substrate.
+- [**ToolProof**](https://github.com/Moshe-ship/toolproof) — tool-call verification + signed receipts. Consumes MTG violations.
+- [**artok**](https://github.com/Moshe-ship/artok) — Arabic token cost calculator across 18 tokenizers. Provides the `token_cost_delta` signal.
+
+## Export JSONL
+
+```bash
+# Regenerate data/*.jsonl from the Python source-of-truth
+aae export
+
+# Or custom path
+aae export --out /path/to/out
+```
+
 ## Community
 
 Built with input from the [Saudi AI Community](https://x.com/i/communities/2032184341682643429).
 
 ## License
 
-MIT -- Musa the Carpenter
+Code: [Apache-2.0](LICENSE) · Data: [CC-BY-4.0](data/LICENSE) · See [LICENSES.md](LICENSES.md).

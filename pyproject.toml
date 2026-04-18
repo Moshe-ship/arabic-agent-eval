@@ -1,15 +1,17 @@
 [project]
 name = "arabic-agent-eval"
 version = "0.1.0"
-description = "The first Arabic function-calling benchmark for AI agents"
+description = "The first Arabic function-calling benchmark for AI agents, with dialect splits"
 requires-python = ">=3.9"
-license = "MIT"
-authors = [{ name = "Musa the Carpenter" }]
-keywords = ["arabic", "agent", "evaluation", "function-calling", "benchmark", "tool-use"]
+license = "Apache-2.0"
+authors = [{ name = "Mousa Abumazin" }]
+keywords = ["arabic", "agent", "evaluation", "function-calling", "benchmark", "tool-use", "dialects", "hermes"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: Linguistic",
+    "Natural Language :: Arabic",
+    "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "rich>=13.0.0",
