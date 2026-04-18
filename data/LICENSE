@@ -1,0 +1,19 @@
+Creative Commons Attribution 4.0 International License (CC-BY-4.0)
+
+The contents of this directory (the "Data") are licensed under the
+Creative Commons Attribution 4.0 International License. You may share and
+adapt the Data for any purpose, including commercial use, provided you
+give appropriate credit, link to this license, and indicate if changes
+were made.
+
+Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Attribution format:
+
+    Arabic Agent Eval, by Mousa Abumazin
+    https://github.com/Moshe-ship/arabic-agent-eval
+    Licensed under CC-BY-4.0
+
+The software in `arabic_agent_eval/`, `tests/`, `scripts/`, and the rest of
+the repository is licensed separately under the Apache License 2.0
+(see ../LICENSE). See ../LICENSES.md for the license split.

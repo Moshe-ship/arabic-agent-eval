@@ -17,7 +17,7 @@ PROVIDER_CONFIGS = {
     },
     "anthropic": {
         "base_url": "https://api.anthropic.com/v1",
-        "model": "claude-sonnet-4-6-20250514",
+        "model": "claude-sonnet-4-6",
         "env_key": "ANTHROPIC_API_KEY",
     },
     "google": {
@@ -64,6 +64,21 @@ PROVIDER_CONFIGS = {
         "base_url": "https://api.fireworks.ai/inference/v1",
         "model": "accounts/fireworks/models/qwen2p5-72b-instruct",
         "env_key": "FIREWORKS_API_KEY",
+    },
+    # OpenRouter — the pragmatic route to test NousResearch Hermes 4 family.
+    # Model slugs: nousresearch/hermes-4-70b, nousresearch/hermes-4-405b,
+    # nousresearch/hermes-4-14b. Override via --model on the CLI.
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "model": "nousresearch/hermes-4-70b",
+        "env_key": "OPENROUTER_API_KEY",
+    },
+    # Direct Hermes endpoint — set HERMES_BASE_URL to your Nous/self-hosted URL
+    # (e.g. a Hermes-Function-Calling Inference server). Defaults to OpenAI-compatible.
+    "hermes": {
+        "base_url": "https://hermes.nousresearch.com/v1",
+        "model": "NousResearch/Hermes-4-70B",
+        "env_key": "HERMES_API_KEY",
     },
 }
 

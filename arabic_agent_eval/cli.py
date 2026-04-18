@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -18,6 +19,7 @@ from arabic_agent_eval.providers import (
     load_config,
     make_call_fn,
 )
+from arabic_agent_eval.report import benchmark_result_to_markdown
 from arabic_agent_eval import display
 
 console = Console()
@@ -37,8 +39,15 @@ def main() -> None:
 @click.option("--provider", "-p", help="Specific provider to benchmark")
 @click.option("--model", "-m", help="Override model name")
 @click.option("--json-output", is_flag=True, help="Output as JSON")
+@click.option("--md-output", type=click.Path(path_type=Path), help="Write markdown report to PATH")
 @click.option("--min-score", type=float, help="Fail if score below this threshold (0-1)")
-def run(provider: str | None, model: str | None, json_output: bool, min_score: float | None) -> None:
+def run(
+    provider: str | None,
+    model: str | None,
+    json_output: bool,
+    md_output: Path | None,
+    min_score: float | None,
+) -> None:
     """Run full benchmark across providers."""
     dataset = Dataset()
 
@@ -76,6 +85,12 @@ def run(provider: str | None, model: str | None, json_output: bool, min_score: f
         for r in results:
             display.print_benchmark_result(r)
             console.print()
+
+    if md_output:
+        md_output.parent.mkdir(parents=True, exist_ok=True)
+        md_text = "\n\n---\n\n".join(benchmark_result_to_markdown(r) for r in results)
+        md_output.write_text(md_text, encoding="utf-8")
+        console.print(f"[dim]Markdown report → {md_output}[/dim]")
 
     if min_score is not None:
         for r in results:
@@ -138,6 +153,18 @@ def show_dataset() -> None:
     """Show dataset statistics."""
     dataset = Dataset()
     display.print_dataset_stats(dataset)
+
+
+@main.command("export")
+@click.option("--out", "-o", type=click.Path(path_type=Path), default=Path("data"),
+              help="Output directory (default: ./data)")
+def export_cmd(out: Path) -> None:
+    """Export dataset to JSONL splits per dialect + functions.json."""
+    from arabic_agent_eval.exporter import export
+    counts = export(out)
+    for key, count in counts.items():
+        console.print(f"  [dim]{key}:[/dim] {count}")
+    console.print(f"[green]Exported to {out.resolve()}[/green]")
 
 
 @main.command()

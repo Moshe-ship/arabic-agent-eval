@@ -1,0 +1,26 @@
+{
+  "simple_function_calling": {
+    "name_ar": "استدعاء بسيط",
+    "weight": 0.2
+  },
+  "parameter_extraction": {
+    "name_ar": "استخراج المعاملات",
+    "weight": 0.2
+  },
+  "multi_step": {
+    "name_ar": "تفكير متعدد الخطوات",
+    "weight": 0.2
+  },
+  "dialect_handling": {
+    "name_ar": "معالجة اللهجات",
+    "weight": 0.15
+  },
+  "tool_selection": {
+    "name_ar": "اختيار الأداة",
+    "weight": 0.15
+  },
+  "error_recovery": {
+    "name_ar": "معالجة الأخطاء",
+    "weight": 0.1
+  }
+}
