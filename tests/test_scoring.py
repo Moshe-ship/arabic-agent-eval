@@ -5,6 +5,7 @@ from arabic_agent_eval.scoring import (
     CategoryScore,
     compute_overall_score,
     grade,
+    normalize_arabic,
     score_function_call,
     _contains_arabic,
 )
@@ -119,3 +120,61 @@ def test_compute_overall_score():
 
     overall = compute_overall_score(cat_scores)
     assert 0.9 < overall <= 1.0
+
+
+def test_score_function_call_empty_expected_args_no_crash():
+    """Regression: score_function_call used to raise UnboundLocalError when expected_args was empty."""
+    func, arg, arabic = score_function_call(
+        "get_time",
+        "get_time",
+        {},
+        {},
+    )
+    assert func == 1.0
+    assert arg == 1.0
+    assert arabic == 1.0
+
+
+def test_score_function_call_empty_expected_args_with_extra_actual():
+    """Empty expected but actual has args → half credit on args, perfect preservation."""
+    func, arg, arabic = score_function_call(
+        "get_time",
+        "get_time",
+        {},
+        {"city": "tokyo"},
+    )
+    assert func == 1.0
+    assert arg == 0.5
+    assert arabic == 1.0
+
+
+def test_normalize_arabic_alef_variants():
+    assert normalize_arabic("أحمد") == normalize_arabic("احمد")
+    assert normalize_arabic("إبراهيم") == normalize_arabic("ابراهيم")
+    assert normalize_arabic("آية") == normalize_arabic("اية")
+
+
+def test_normalize_arabic_ya_and_ta_marbuta():
+    assert normalize_arabic("مكتبى") == normalize_arabic("مكتبي")
+    assert normalize_arabic("فاطمة") == normalize_arabic("فاطمه")
+
+
+def test_normalize_arabic_tatweel_stripped():
+    assert normalize_arabic("مــرحبا") == normalize_arabic("مرحبا")
+
+
+def test_normalize_arabic_non_arabic_lowercased():
+    assert normalize_arabic("Hello World") == "hello world"
+
+
+def test_score_function_call_arabic_normalization_partial_credit():
+    """alef variants should score 0.9 (normalized match), not 0."""
+    func, arg, arabic = score_function_call(
+        "book_hotel",
+        "book_hotel",
+        {"city": "إبراهيمية"},
+        {"city": "ابراهيمية"},
+    )
+    assert func == 1.0
+    assert arg == 0.9
+    assert arabic == 1.0

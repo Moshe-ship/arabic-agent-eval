@@ -154,42 +154,40 @@ def score_function_call(
     if actual_args is None:
         return func_score, 0.0, 0.0
 
-    # Argument accuracy
+    arabic_matches = 0
+    arabic_total = 0
+
     if not expected_args:
         arg_score = 1.0 if not actual_args else 0.5
     else:
-        matches = 0
+        matches = 0.0
         total = len(expected_args)
-        arabic_matches = 0
-        arabic_total = 0
 
         for key, expected_val in expected_args.items():
             actual_val = actual_args.get(key)
             if actual_val is None:
                 continue
 
-            # Wildcard match
             if expected_val == "*":
                 matches += 1
                 continue
 
-            # Normalize for comparison
             ev = str(expected_val).strip()
             av = str(actual_val).strip()
 
             if ev == av:
                 matches += 1
+            elif normalize_arabic(ev) == normalize_arabic(av):
+                matches += 0.9
             elif ev.lower() == av.lower():
                 matches += 0.8
 
-            # Check Arabic preservation
             if _contains_arabic(ev):
                 arabic_total += 1
                 if _contains_arabic(av):
                     arabic_matches += 1
 
         arg_score = matches / total if total > 0 else 1.0
-        arabic_score = arabic_matches / arabic_total if arabic_total > 0 else 1.0
 
     arabic_score = arabic_matches / arabic_total if arabic_total > 0 else 1.0
     return func_score, arg_score, arabic_score
@@ -198,3 +196,25 @@ def score_function_call(
 def _contains_arabic(text: str) -> bool:
     """Check if text contains Arabic characters."""
     return any("\u0600" <= c <= "\u06FF" or "\u0750" <= c <= "\u077F" for c in text)
+
+
+_TATWEEL = "\u0640"
+_ALEF_VARIANTS = str.maketrans({"\u0622": "\u0627", "\u0623": "\u0627", "\u0625": "\u0627"})
+_YA_VARIANT = str.maketrans({"\u0649": "\u064A"})
+_TA_MARBUTA = str.maketrans({"\u0629": "\u0647"})
+
+
+def normalize_arabic(text: str) -> str:
+    """Normalize Arabic text for comparison.
+
+    Strips tatweel, unifies alef variants (آأإ → ا), ya (ى → ي),
+    and ta-marbuta (ة → ه). Non-Arabic text passes through lowercased.
+    Defined in docs/grading.md and used by score_function_call.
+    """
+    if not _contains_arabic(text):
+        return text.lower().strip()
+    out = text.replace(_TATWEEL, "")
+    out = out.translate(_ALEF_VARIANTS)
+    out = out.translate(_YA_VARIANT)
+    out = out.translate(_TA_MARBUTA)
+    return out.strip()
