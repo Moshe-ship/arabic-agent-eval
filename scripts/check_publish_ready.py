@@ -45,6 +45,8 @@ def check_bundle(
     *,
     heuristic_max: float,
     allow_diagnostic: bool,
+    allow_no_runs: bool = False,
+    min_non_diagnostic: int = 1,
 ) -> list[str]:
     """Return a list of failure reasons. Empty list == publish-ready."""
     reasons: list[str] = []
@@ -60,10 +62,28 @@ def check_bundle(
             "with a single scanner_version to produce a publishable bundle"
         )
 
+    # runs/ presence — a bundle without the source run JSONs can't be
+    # reproduced. Require by default; `--allow-no-runs` opts out for
+    # bundles where runs/ is deliberately omitted (e.g. synthetic
+    # example bundles, or bundles that link to runs elsewhere).
+    has_runs_file = any(
+        name.startswith("runs/") for name in manifest.files.keys()
+    )
+    if not has_runs_file and not allow_no_runs:
+        reasons.append(
+            "bundle has no `runs/` files — published bundles must carry "
+            "the source run JSONs so numbers are reproducible. Pass "
+            "--allow-no-runs to waive (only for synthetic examples or "
+            "when source runs are tracked elsewhere)"
+        )
+
     rows = matrix.get("rows") or []
     if not rows:
         reasons.append("matrix.json contains no rows")
         return reasons
+
+    # Diagnostic-row accounting — used after the per-row loop.
+    n_non_diagnostic = 0
 
     for i, row in enumerate(rows):
         label = f"rows[{i}] ({row.get('provider', '?')}/{row.get('model', '?')})"
@@ -76,10 +96,20 @@ def check_bundle(
                 f"published row must trace back to a run_id + timestamp"
             )
 
+        # schema_map_tools is expected in run_metadata — declares which
+        # tool schemas the scanner was wired against. Missing means the
+        # provenance for schema coverage is unclear.
+        if "schema_map_tools" not in md:
+            reasons.append(
+                f"{label}: run_metadata missing `schema_map_tools` list — "
+                f"cannot verify which tool-schema map the scanner used"
+            )
+
         hsr = float(row.get("heuristic_scan_rate", 0.0))
+        row_diagnostic = bool(row.get("diagnostic", False))
         if hsr > heuristic_max:
             if allow_diagnostic:
-                if not row.get("diagnostic"):
+                if not row_diagnostic:
                     reasons.append(
                         f"{label}: heuristic_scan_rate={hsr:.2%} exceeds "
                         f"{heuristic_max:.0%} but `diagnostic` flag is false; "
@@ -94,6 +124,8 @@ def check_bundle(
                     f"result. Re-scan with an x-mtg-annotated tool-schema "
                     f"map, or re-run the gate with --allow-diagnostic"
                 )
+        if not row_diagnostic:
+            n_non_diagnostic += 1
 
         n_items = int((row.get("run_metadata") or {}).get("n_items") or row.get("total_items") or 0)
         if n_items >= 2:
@@ -129,6 +161,17 @@ def check_bundle(
                     f"partially or mutated after write"
                 )
 
+    # Aggregate diagnostic checks. Even with --allow-diagnostic, we
+    # never publish a bundle where EVERY row is diagnostic — that is
+    # pure heuristic theater and should never hit main.
+    if n_non_diagnostic < min_non_diagnostic:
+        reasons.append(
+            f"only {n_non_diagnostic}/{len(rows)} rows are non-diagnostic; "
+            f"publish gate requires at least {min_non_diagnostic}. "
+            f"A bundle with zero schema-grounded rows is theater, not a "
+            f"result — re-scan with an annotated tool-schema map"
+        )
+
     return reasons
 
 
@@ -147,12 +190,25 @@ def main() -> int:
              "their diagnostic flag is set. Use when publishing a "
              "deliberately-diagnostic run.",
     )
+    p.add_argument(
+        "--allow-no-runs", action="store_true",
+        help="Waive the requirement that bundles carry source run JSONs "
+             "under runs/. Use for synthetic / example bundles.",
+    )
+    p.add_argument(
+        "--min-non-diagnostic", type=int, default=1,
+        help="Minimum number of non-diagnostic rows required "
+             "(default 1). Gate always rejects a bundle with zero "
+             "schema-grounded rows.",
+    )
     args = p.parse_args()
 
     reasons = check_bundle(
         args.bundle,
         heuristic_max=args.heuristic_max,
         allow_diagnostic=args.allow_diagnostic,
+        allow_no_runs=args.allow_no_runs,
+        min_non_diagnostic=args.min_non_diagnostic,
     )
     if not reasons:
         print(f"PUBLISH_READY: {args.bundle}")

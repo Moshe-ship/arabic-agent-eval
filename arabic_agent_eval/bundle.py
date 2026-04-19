@@ -117,8 +117,14 @@ def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
         "n_items": md.get("n_items"),
         "total_calls_scanned": row.get("total_calls_scanned"),
         "heuristic_scan_rate": row.get("heuristic_scan_rate"),
+        "schema_bound_rate": row.get("schema_bound_rate"),
+        "schema_covered_tools": list(row.get("schema_covered_tools") or []),
+        "schema_bound_arg_count": row.get("schema_bound_arg_count"),
+        "heuristic_arg_count": row.get("heuristic_arg_count"),
+        "diagnostic": row.get("diagnostic"),
         "has_baseline_ci": row.get("baseline_ci_95") is not None,
         "has_repaired_ci": row.get("repaired_ci_95") is not None,
+        "has_runs": bool((md.get("schema_map_tools") or [])),
     }
 
 

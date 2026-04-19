@@ -153,6 +153,18 @@ class MatrixRow:
     # primary path; this tells the reader how much they're trusting
     # the heuristic. Target: <0.1 for any published claim.
     heuristic_scan_rate: float = 0.0
+    # Positive framing of the same underlying quantity: fraction of
+    # scanned args that had a schema-declared x-mtg block.
+    # `schema_bound_rate + heuristic_scan_rate == 1.0` by construction.
+    schema_bound_rate: float = 0.0
+    # Sorted list of tool names where at least one argument had an
+    # x-mtg block used during the scan. Empty when no tools were
+    # schema-grounded. Absolute coverage signal for the reader.
+    schema_covered_tools: list[str] = field(default_factory=list)
+    # Absolute counts behind the rates. Useful for aggregating across
+    # runs or reporting N-like numbers in a paper.
+    schema_bound_arg_count: int = 0
+    heuristic_arg_count: int = 0
     # Repair path
     calls_with_concrete_repair: int = 0
     repair_rate: float = 0.0
@@ -218,6 +230,10 @@ class MatrixRow:
             "family_rates": {k: round(v, 4) for k, v in self.family_rates.items()},
             "layer_rates": {k: round(v, 4) for k, v in self.layer_rates.items()},
             "heuristic_scan_rate": round(self.heuristic_scan_rate, 4),
+            "schema_bound_rate": round(self.schema_bound_rate, 4),
+            "schema_covered_tools": list(self.schema_covered_tools),
+            "schema_bound_arg_count": self.schema_bound_arg_count,
+            "heuristic_arg_count": self.heuristic_arg_count,
             "repair_rate": round(self.repair_rate, 4),
             "repair_quality_mean": (
                 round(self.repair_quality_mean, 4)
@@ -457,6 +473,8 @@ def scan_with_schemas(
     homoglyph_hits = 0
     total_calls = 0
     heuristic_calls = 0
+    schema_bound_calls = 0
+    schema_covered_tools: set[str] = set()
     repair_hits = 0
     family_hits: dict[str, int] = {fam: 0 for fam in _FAMILY_ORDER}
     layer_hits: dict[str, int] = {lay: 0 for lay in _LAYERS}
@@ -489,6 +507,10 @@ def scan_with_schemas(
 
             if used_heuristic:
                 heuristic_calls += 1
+            else:
+                schema_bound_calls += 1
+                if tool_name:
+                    schema_covered_tools.add(tool_name)
 
             codes = {v.code for v in guard.violations}
             if guard.violations:
@@ -542,6 +564,10 @@ def scan_with_schemas(
         if hits > 0
     }
     row.heuristic_scan_rate = heuristic_calls / max(1, total_calls)
+    row.schema_bound_rate = schema_bound_calls / max(1, total_calls)
+    row.schema_covered_tools = sorted(schema_covered_tools)
+    row.schema_bound_arg_count = schema_bound_calls
+    row.heuristic_arg_count = heuristic_calls
     row.calls_with_concrete_repair = repair_hits
     row.repair_rate = repair_hits / max(1, total_calls)
     if quality_scores:
@@ -692,6 +718,24 @@ def render_markdown(matrix: ResultMatrix) -> str:
             )
         )
 
+    # Schema coverage summary — positive counterpart of heuristic_scan_rate.
+    coverage_header = (
+        "| provider | model | schema-bound % | schema-bound args | heuristic args | tools covered |\n"
+        "|---|---|---:|---:|---:|---|"
+    )
+    coverage_rows = []
+    for row in matrix.rows:
+        tools = ", ".join(f"`{t}`" for t in row.schema_covered_tools) or "—"
+        coverage_rows.append(
+            "| {p} | {m} | {sb:.1%} | {sba} | {ha} | {tools} |".format(
+                p=row.provider, m=row.model,
+                sb=row.schema_bound_rate,
+                sba=row.schema_bound_arg_count,
+                ha=row.heuristic_arg_count,
+                tools=tools,
+            )
+        )
+
     # Run provenance — one line per row, safe to eyeball.
     meta_lines = []
     for row in matrix.rows:
@@ -748,6 +792,17 @@ def render_markdown(matrix: ResultMatrix) -> str:
         "",
         fam_header,
         *fam_rows,
+    ])
+    parts.extend([
+        "",
+        "## Schema coverage",
+        "",
+        "`schema-bound %` = fraction of scanned args with an x-mtg block "
+        "on their tool schema. Higher is stronger evidence. Rows with "
+        "low coverage end up marked ⚠ diagnostic in the main table above.",
+        "",
+        coverage_header,
+        *coverage_rows,
     ])
     if quality_rows:
         parts.extend([

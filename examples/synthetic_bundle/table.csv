@@ -1,0 +1,2 @@
+provider,model,baseline_score,repaired_score,violation_rate,transliteration_rate,dialect_drift_rate,bidi_violation_rate,homoglyph_rate,repair_rate,total_items,total_calls_scanned,total_cost_usd,median_latency_ms
+example,synthetic-v1,0.9,0.9,0.0833,0.0,0.0833,0.0,0.0,0.0,5,12,,

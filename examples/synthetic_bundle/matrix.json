@@ -1,0 +1,74 @@
+{
+  "rows": [
+    {
+      "baseline_ci_95": [
+        0.7,
+        1.0
+      ],
+      "baseline_score": 0.9,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0833,
+      "family_rates": {
+        "dialect": 0.0833
+      },
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {
+        "language": 0.0833
+      },
+      "median_latency_ms": null,
+      "model": "synthetic-v1",
+      "provider": "example",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.7,
+        1.0
+      ],
+      "repaired_score": 0.9,
+      "run_metadata": {
+        "model": "synthetic-v1",
+        "n_errors": 0,
+        "n_items": 5,
+        "provider": "example",
+        "run_id": "8afd7ff0-5034-4dcc-b1af-e08975fc9331",
+        "scanned_at": "2026-04-19T04:44:48+00:00",
+        "scanner_version": "mtg-matrix/0.2",
+        "schema_map_tools": [
+          "arabic_grammar_correct",
+          "calculate_zakat",
+          "detect_arabic_dialect",
+          "find_quran_verse",
+          "get_prayer_times",
+          "hijri_date",
+          "lookup_saudi_address",
+          "send_message",
+          "send_message_egy",
+          "send_message_gulf",
+          "send_message_lev",
+          "send_message_msa",
+          "tashkeel",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 12,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "find_quran_verse",
+        "get_prayer_times",
+        "lookup_saudi_address",
+        "send_message_gulf"
+      ],
+      "total_calls_scanned": 12,
+      "total_cost_usd": null,
+      "total_items": 5,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.0833
+    }
+  ]
+}
