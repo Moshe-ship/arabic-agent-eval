@@ -111,6 +111,44 @@ def get_api_key(provider: str) -> str | None:
     return key
 
 
+# Per-provider environment variables that override the hard-coded base_url /
+# model defaults. Useful for self-hosted endpoints (e.g. a private Hermes
+# Inference server) without patching code.
+_BASE_URL_OVERRIDES: dict[str, str] = {
+    "hermes": "HERMES_BASE_URL",
+    "openrouter": "OPENROUTER_BASE_URL",
+}
+
+_MODEL_OVERRIDES: dict[str, str] = {
+    "hermes": "HERMES_MODEL",
+    "openrouter": "OPENROUTER_MODEL",
+}
+
+
+def get_base_url(provider: str) -> str:
+    """Return the effective base_url for a provider.
+
+    Resolves an env-var override when one is declared (e.g. HERMES_BASE_URL);
+    falls back to the PROVIDER_CONFIGS entry otherwise.
+    """
+    env_name = _BASE_URL_OVERRIDES.get(provider)
+    if env_name:
+        override = os.environ.get(env_name)
+        if override:
+            return override
+    return PROVIDER_CONFIGS.get(provider, {}).get("base_url", "")
+
+
+def get_default_model(provider: str) -> str:
+    """Return the effective default model for a provider (env override → config)."""
+    env_name = _MODEL_OVERRIDES.get(provider)
+    if env_name:
+        override = os.environ.get(env_name)
+        if override:
+            return override
+    return PROVIDER_CONFIGS.get(provider, {}).get("model", "")
+
+
 def get_available_providers() -> list[str]:
     """Return providers that have API keys configured."""
     return [p for p in PROVIDER_CONFIGS if get_api_key(p)]
@@ -132,8 +170,8 @@ def call_openai_compatible(
     if not api_key:
         raise ValueError(f"No API key for {provider}. Set {pconf['env_key']} or run: aae config")
 
-    base_url = pconf["base_url"]
-    model_name = model or pconf["model"]
+    base_url = get_base_url(provider) or pconf["base_url"]
+    model_name = model or get_default_model(provider) or pconf["model"]
 
     system_prompt = (
         "أنت مساعد ذكي يستخدم الأدوات المتاحة للإجابة على طلبات المستخدم. "

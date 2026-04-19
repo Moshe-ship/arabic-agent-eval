@@ -162,58 +162,57 @@ class Evaluator:
         )
 
     def _score_item(self, item: EvalItem, actual_calls: list[dict]) -> Score:
-        """Score an item based on expected vs actual calls."""
+        """Score an item based on expected vs actual calls.
+
+        Grades EVERY expected call structurally, not just the first:
+        function_selection is 1.0 only when every expected call's function
+        matches in order; argument_accuracy and arabic_preservation are
+        per-call averages. Extra actual calls beyond the expected count
+        are ignored. Missing actual calls score 0 on all axes.
+        """
         score = Score(item_id=item.id, category=item.category)
 
         if not item.expected_calls:
             return score
-
         if not actual_calls:
             return score
 
-        # Score the first expected call against the first actual call
-        expected = item.expected_calls[0]
-        actual = actual_calls[0] if actual_calls else {}
+        func_sum = 0.0
+        arg_sum = 0.0
+        arabic_sum = 0.0
+        n = len(item.expected_calls)
 
-        actual_fn = actual.get("function", actual.get("name"))
-        actual_args = actual.get("arguments", actual.get("args", {}))
-        if isinstance(actual_args, str):
-            try:
-                actual_args = json.loads(actual_args)
-            except json.JSONDecodeError:
-                actual_args = {}
+        for i, expected in enumerate(item.expected_calls):
+            if i >= len(actual_calls):
+                # Missing call — zero credit on all axes for this slot
+                continue
+            actual = actual_calls[i] or {}
+            actual_fn = actual.get("function", actual.get("name"))
+            actual_args = actual.get("arguments", actual.get("args", {}))
+            if isinstance(actual_args, str):
+                try:
+                    actual_args = json.loads(actual_args)
+                except json.JSONDecodeError:
+                    actual_args = {}
 
-        func_score, arg_score, arabic_score = score_function_call(
-            expected.function,
-            actual_fn,
-            expected.arguments,
-            actual_args,
-        )
+            func_s, arg_s, arabic_s = score_function_call(
+                expected.function,
+                actual_fn,
+                expected.arguments,
+                actual_args,
+            )
+            func_sum += func_s
+            arg_sum += arg_s
+            arabic_sum += arabic_s
 
-        score.function_selection = func_score
-        score.argument_accuracy = arg_score
-        score.arabic_preservation = arabic_score
+        score.function_selection = func_sum / n
+        score.argument_accuracy = arg_sum / n
+        score.arabic_preservation = arabic_sum / n
 
-        # Multi-step: check additional calls
-        if len(item.expected_calls) > 1 and len(actual_calls) > 1:
-            additional_matches = 0
-            for i, exp_call in enumerate(item.expected_calls[1:], 1):
-                if i < len(actual_calls):
-                    act = actual_calls[i]
-                    act_fn = act.get("function", act.get("name"))
-                    if act_fn == exp_call.function:
-                        additional_matches += 1
-            # Boost arg accuracy based on multi-step correctness
-            multi_ratio = additional_matches / (len(item.expected_calls) - 1)
-            score.argument_accuracy = (score.argument_accuracy + multi_ratio) / 2
-
-        # Dialect understanding (for dialect category)
         if item.category == "dialect_handling":
-            # If function was selected correctly, the model understood the dialect
-            score.dialect_understanding = func_score
+            score.dialect_understanding = score.function_selection
 
-        # Error handling (for error category)
         if item.category == "error_recovery":
-            score.error_handling = func_score
+            score.error_handling = score.function_selection
 
         return score

@@ -81,3 +81,103 @@ def test_benchmark_result_grade():
     er = evaluator.evaluate_item(item)
     br = BenchmarkResult(provider="test", model="mock", results=[er])
     assert br.overall_grade == "A"
+
+
+def test_multi_step_grades_every_call_structurally():
+    """Regression: prior implementation only scored the first expected call
+    fully; subsequent calls only contributed a function-name match boost."""
+
+    def multi_step_perfect(instruction, tools, functions):
+        return {
+            "calls": [
+                {"function": "search_restaurants", "arguments": {"city": "الرياض"}},
+                {"function": "book_table", "arguments": {"restaurant": "anywhere", "guests": 2}},
+                {"function": "send_message", "arguments": {"recipient": "سارة", "platform": "whatsapp"}},
+            ],
+            "raw": "",
+        }
+
+    item = EvalItem(
+        id="multi_test",
+        category="multi_step",
+        instruction="reservation + notify",
+        dialect="msa",
+        available_functions=["search_restaurants", "book_table", "send_message"],
+        expected_calls=[
+            ExpectedCall(function="search_restaurants", arguments={"city": "الرياض"}),
+            ExpectedCall(function="book_table", arguments={"restaurant": "*", "guests": 2}),
+            ExpectedCall(function="send_message", arguments={"recipient": "سارة", "platform": "whatsapp"}),
+        ],
+        difficulty="hard",
+    )
+    evaluator = Evaluator(call_fn=multi_step_perfect, provider="t", model="m")
+    result = evaluator.evaluate_item(item)
+    # All three calls score as perfect structural matches
+    assert result.score.function_selection == 1.0
+    assert result.score.argument_accuracy == 1.0
+    assert result.score.arabic_preservation == 1.0
+
+
+def test_multi_step_missing_trailing_calls_are_penalized():
+    """If the model emits only the first of three expected calls, axes
+    should average down — not look like partial credit on only first."""
+
+    def only_first(instruction, tools, functions):
+        return {
+            "calls": [
+                {"function": "search_restaurants", "arguments": {"city": "الرياض"}},
+            ],
+            "raw": "",
+        }
+
+    item = EvalItem(
+        id="multi_partial",
+        category="multi_step",
+        instruction="chain",
+        dialect="msa",
+        available_functions=["search_restaurants", "book_table", "send_message"],
+        expected_calls=[
+            ExpectedCall(function="search_restaurants", arguments={"city": "الرياض"}),
+            ExpectedCall(function="book_table", arguments={"restaurant": "*", "guests": 2}),
+            ExpectedCall(function="send_message", arguments={"recipient": "سارة", "platform": "whatsapp"}),
+        ],
+        difficulty="hard",
+    )
+    evaluator = Evaluator(call_fn=only_first, provider="t", model="m")
+    result = evaluator.evaluate_item(item)
+    # First call full credit, next two contribute 0 → 1/3 average
+    assert abs(result.score.function_selection - (1 / 3)) < 1e-6
+    assert abs(result.score.argument_accuracy - (1 / 3)) < 1e-6
+
+
+def test_multi_step_wrong_middle_call_partial_credit():
+    """Correct first + wrong middle + correct third — argument accuracy is
+    the per-call mean across all three, not just the first."""
+
+    def wrong_middle(instruction, tools, functions):
+        return {
+            "calls": [
+                {"function": "search_restaurants", "arguments": {"city": "الرياض"}},
+                {"function": "book_hotel", "arguments": {}},  # wrong tool
+                {"function": "send_message", "arguments": {"recipient": "سارة", "platform": "whatsapp"}},
+            ],
+            "raw": "",
+        }
+
+    item = EvalItem(
+        id="multi_middle",
+        category="multi_step",
+        instruction="chain",
+        dialect="msa",
+        available_functions=["search_restaurants", "book_table", "send_message", "book_hotel"],
+        expected_calls=[
+            ExpectedCall(function="search_restaurants", arguments={"city": "الرياض"}),
+            ExpectedCall(function="book_table", arguments={"restaurant": "*", "guests": 2}),
+            ExpectedCall(function="send_message", arguments={"recipient": "سارة", "platform": "whatsapp"}),
+        ],
+        difficulty="hard",
+    )
+    evaluator = Evaluator(call_fn=wrong_middle, provider="t", model="m")
+    result = evaluator.evaluate_item(item)
+    # 2/3 correct tool selection, not 1/3
+    assert abs(result.score.function_selection - (2 / 3)) < 1e-6

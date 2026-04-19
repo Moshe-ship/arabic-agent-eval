@@ -57,21 +57,31 @@ def score_turn(
     actual_function: str | None,
     expected_args: dict[str, Any],
     actual_args: dict[str, Any] | None,
-    is_dialect_category: bool = False,
+    category: str = "simple_function_calling",
 ) -> Score:
-    """Score a single turn and produce a Score dataclass."""
+    """Score a single turn and produce a Score dataclass.
+
+    `category` MUST be the real benchmark category (simple_function_calling,
+    parameter_extraction, multi_step, dialect_handling, tool_selection, or
+    error_recovery) so Score.total uses the correct per-category weighting.
+
+    For dialect_handling items, dialect_understanding := function_selection.
+    For error_recovery items, error_handling := function_selection.
+    """
     func, arg, arabic = score_function_call(
         expected_function, actual_function, expected_args, actual_args
     )
     score = Score(
         item_id="rollout",
-        category="dialect_handling" if is_dialect_category else "simple_function_calling",
+        category=category,
         function_selection=func,
         argument_accuracy=arg,
         arabic_preservation=arabic,
     )
-    if is_dialect_category:
+    if category == "dialect_handling":
         score.dialect_understanding = func
+    elif category == "error_recovery":
+        score.error_handling = func
     return score
 
 

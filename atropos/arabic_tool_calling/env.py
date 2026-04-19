@@ -102,7 +102,11 @@ class ArabicToolCallingEnv(_UpstreamBaseEnv):
             return 0.0
 
         # Score the first expected vs first actual call. Multi-turn items
-        # aggregate across additional calls.
+        # aggregate across additional calls. Pass the REAL item category so
+        # per-axis weighting matches the benchmark (error_recovery uses
+        # error_handling, dialect_handling uses dialect_understanding, etc.)
+        category = task.item.category
+
         expected_first = task.item.expected_calls[0]
         actual_first = tool_calls[0]
         actual_name = actual_first.get("function") or actual_first.get("name")
@@ -113,7 +117,7 @@ class ArabicToolCallingEnv(_UpstreamBaseEnv):
             actual_function=actual_name,
             expected_args=expected_first.arguments,
             actual_args=actual_args,
-            is_dialect_category=task.is_dialect_category,
+            category=category,
         )
         primary_reward = reward_from_score(primary, self.config.reward_weights)
 
@@ -130,7 +134,7 @@ class ArabicToolCallingEnv(_UpstreamBaseEnv):
                 actual_function=act_name,
                 expected_args=exp_call.arguments,
                 actual_args=act_args,
-                is_dialect_category=task.is_dialect_category,
+                category=category,
             )
             extras.append(reward_from_score(s, self.config.reward_weights))
 

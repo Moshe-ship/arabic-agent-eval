@@ -91,6 +91,66 @@ def test_explicit_reward_weights_override():
     assert reward == 1.0
 
 
+def test_env_preserves_error_recovery_category():
+    """Regression: env previously collapsed all non-dialect tasks to
+    simple_function_calling, which meant error_recovery items never got
+    error_handling weighting in their reward."""
+    from atropos.arabic_tool_calling.scoring import score_turn
+    from arabic_agent_eval.dataset import CATEGORIES
+
+    score = score_turn(
+        expected_function="search_flights",
+        actual_function="search_flights",
+        expected_args={"from_city": "a", "to_city": "b"},
+        actual_args={"from_city": "a", "to_city": "b"},
+        category="error_recovery",
+    )
+    # error_handling is set for error_recovery category
+    assert score.error_handling == 1.0
+    assert score.category == "error_recovery"
+    # Score.total picks per-category weights (0.3 func + 0.2 arg + 0.2 ar + 0.3 err)
+    assert score.total == 1.0
+
+
+def test_env_preserves_tool_selection_category():
+    from atropos.arabic_tool_calling.scoring import score_turn
+
+    score = score_turn(
+        expected_function="get_news",
+        actual_function="get_news",
+        expected_args={"category": "sports"},
+        actual_args={"category": "sports"},
+        category="tool_selection",
+    )
+    assert score.category == "tool_selection"
+    # Not dialect_handling → dialect_understanding stays 0
+    assert score.dialect_understanding == 0.0
+    # Not error_recovery → error_handling stays 0
+    assert score.error_handling == 0.0
+    # tool_selection uses the default per-category formula (0.4/0.35/0.25)
+    assert score.total == 1.0
+
+
+def test_env_scores_error_recovery_item_end_to_end():
+    env = ArabicToolCallingEnv(EnvConfig(n_tasks_per_rollout=50, seed=42))
+    env.setup()
+    # Find an error_recovery task in the buffer
+    err_task = None
+    while True:
+        t = env.next_task()
+        if t is None:
+            break
+        if t.item.category == "error_recovery":
+            err_task = t
+            break
+    assert err_task is not None, "no error_recovery task found in sample — expand n_tasks_per_rollout"
+
+    expected = err_task.item.expected_calls[0]
+    perfect = {"calls": [{"function": expected.function, "arguments": expected.arguments}]}
+    reward = env.score_response(err_task, perfect)
+    assert reward == 1.0
+
+
 def test_openai_chat_completion_shape_extracted():
     env = ArabicToolCallingEnv(EnvConfig(n_tasks_per_rollout=1, seed=42))
     env.setup()
