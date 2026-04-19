@@ -150,3 +150,48 @@ def test_validate_bundle_thin_wrapper(tmp_path: Path):
     matrix = _minimal_matrix()
     out = write_bundle(matrix, tmp_path / "bundle")
     validate_bundle(out)  # must not raise
+
+
+# ---------- has_runs semantics ----------
+
+
+def test_has_runs_false_when_no_runs_copied(tmp_path: Path):
+    """A bundle without run_json_files must manifest has_runs=false,
+    regardless of what schema_map_tools might suggest."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.has_runs is False
+    # row_summaries MUST NOT carry has_runs (it's a bundle-level fact)
+    for s in manifest.row_summaries:
+        assert "has_runs" not in s
+
+
+def test_has_runs_true_when_runs_copied(tmp_path: Path):
+    """When run_json_files are supplied, manifest.has_runs must be true."""
+    matrix = _minimal_matrix()
+    run_src = tmp_path / "hermes.json"
+    run_src.write_text(json.dumps({"provider": "p", "model": "m"}), encoding="utf-8")
+    out = write_bundle(matrix, tmp_path / "bundle", run_json_files=[run_src])
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.has_runs is True
+
+
+def test_load_bundle_rejects_manifest_has_runs_lie(tmp_path: Path):
+    """A manifest that claims has_runs=true without actually shipping
+    runs/ files must fail integrity — otherwise the flag is
+    unauditable."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")  # has_runs=false
+    manifest_path = out / "MANIFEST.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    data["has_runs"] = True  # lie
+    manifest_path.write_text(
+        json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    with pytest.raises(BundleError, match="has_runs"):
+        validate_bundle(out)

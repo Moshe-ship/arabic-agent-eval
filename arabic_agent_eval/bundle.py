@@ -68,6 +68,11 @@ class BundleManifest:
     bundle_version: str = BUNDLE_VERSION
     scanner_version: str = ""
     created_at: str = ""
+    # True when the bundle has one or more `runs/*.json` source files.
+    # Bundle-level fact (not per-row) since runs/ is a shared directory.
+    # Derived from `files` at write time; load_bundle recomputes to
+    # guard against manifest edits that lie about it.
+    has_runs: bool = False
     files: dict[str, str] = field(default_factory=dict)   # path → sha256
     thresholds: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_THRESHOLDS))
     row_summaries: list[dict[str, Any]] = field(default_factory=list)
@@ -78,6 +83,7 @@ class BundleManifest:
                 "bundle_version": self.bundle_version,
                 "scanner_version": self.scanner_version,
                 "created_at": self.created_at,
+                "has_runs": self.has_runs,
                 "files": self.files,
                 "thresholds": self.thresholds,
                 "row_summaries": self.row_summaries,
@@ -93,6 +99,7 @@ class BundleManifest:
             bundle_version=data.get("bundle_version", ""),
             scanner_version=data.get("scanner_version", ""),
             created_at=data.get("created_at", ""),
+            has_runs=bool(data.get("has_runs", False)),
             files=dict(data.get("files", {})),
             thresholds=dict(data.get("thresholds", {})),
             row_summaries=list(data.get("row_summaries", [])),
@@ -106,7 +113,11 @@ class BundleError(ValueError):
 def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
     """Extract the integrity-critical fields of a MatrixRow into the
     manifest so the gate can inspect them without reading matrix.json
-    first. Keeps the manifest self-describing."""
+    first. Keeps the manifest self-describing.
+
+    NOTE: does NOT include `has_runs` — runs/ is a bundle-level fact,
+    not per-row. See `BundleManifest.has_runs` instead.
+    """
     md = row.get("run_metadata") or {}
     return {
         "provider": row.get("provider"),
@@ -124,7 +135,6 @@ def _row_summary(row: dict[str, Any]) -> dict[str, Any]:
         "diagnostic": row.get("diagnostic"),
         "has_baseline_ci": row.get("baseline_ci_95") is not None,
         "has_repaired_ci": row.get("repaired_ci_95") is not None,
-        "has_runs": bool((md.get("schema_map_tools") or [])),
     }
 
 
@@ -193,10 +203,12 @@ def write_bundle(
     versions.discard("")
     scanner_version = next(iter(versions)) if len(versions) == 1 else ""
 
+    bundle_has_runs = any(rel.startswith("runs/") for rel in written)
     manifest = BundleManifest(
         bundle_version=BUNDLE_VERSION,
         scanner_version=scanner_version,
         created_at=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        has_runs=bundle_has_runs,
         files=written,
         thresholds=dict(thresholds or DEFAULT_THRESHOLDS),
         row_summaries=[_row_summary(r) for r in matrix.to_dict()["rows"]],
@@ -235,6 +247,17 @@ def load_bundle(path: Path) -> tuple[BundleManifest, dict[str, Any]]:
         raise BundleError(
             f"unsupported bundle_version {manifest.bundle_version!r} "
             f"(this loader speaks {BUNDLE_VERSION!r})"
+        )
+
+    # Guard against manifest-level lies about has_runs — recompute from
+    # the actual file list and compare. A tampered manifest could claim
+    # has_runs=true without populating runs/, which would sneak past a
+    # surface-level check.
+    actual_has_runs = any(rel.startswith("runs/") for rel in manifest.files)
+    if manifest.has_runs != actual_has_runs:
+        raise BundleError(
+            f"has_runs={manifest.has_runs} in manifest disagrees with "
+            f"actual runs/ files present ({actual_has_runs})"
         )
 
     # Integrity check

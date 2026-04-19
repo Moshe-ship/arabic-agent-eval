@@ -194,15 +194,14 @@ def test_gate_allows_no_runs_with_flag(tmp_path: Path):
     # Remove the runs/ file + update the manifest so the integrity
     # check still passes — we're testing the gate's runs/ requirement
     # in isolation, not manifest integrity.
-    runs_key = next(k for k in (bundle / "MANIFEST.json").read_text().split()
-                    if "runs/" in k) if False else None
-    import hashlib
     manifest_path = bundle / "MANIFEST.json"
     manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
     for rel in list(manifest_data["files"].keys()):
         if rel.startswith("runs/"):
             (bundle / rel).unlink()
             manifest_data["files"].pop(rel)
+    # has_runs is a bundle-level fact — keep it truthful after the edit
+    manifest_data["has_runs"] = False
     manifest_path.write_text(
         json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
     )
