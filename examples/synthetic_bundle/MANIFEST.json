@@ -1,10 +1,10 @@
 {
   "bundle_version": "1",
-  "created_at": "2026-04-19T14:21:14+00:00",
+  "created_at": "2026-04-19T23:46:39+00:00",
   "files": {
-    "matrix.json": "352288b8826a5940f844794514b239b41acdcb5b0578cb440741ae846916f32f",
+    "matrix.json": "c8056553f289c99c4bf2a7604bd02f8ed0fc08a3763dab7241706df016b1c817",
     "table.csv": "80ff9458945842ca79424527c1fed4a74f990e7d0b4e75fa5125caf5515625e7",
-    "table.md": "e67631b9b7b2ef3a3085eb75ddafd7cede8452085b965fcc743d733da6e7bfba"
+    "table.md": "7c114cf0cdca8bc04afd15fa59aba3716ede8910fa7285933247968b63ce7d0b"
   },
   "has_runs": false,
   "row_summaries": [
@@ -17,9 +17,9 @@
       "model": "synthetic-v1",
       "n_items": 5,
       "provider": "example",
-      "run_id": "8bc4d68e-8a7b-408d-8e7d-c40984a7c935",
-      "scanned_at": "2026-04-19T14:21:14+00:00",
-      "scanner_version": "mtg-matrix/0.3",
+      "run_id": "87b62e0f-597e-4457-841a-6eee3f73b34e",
+      "scanned_at": "2026-04-19T23:46:39+00:00",
+      "scanner_version": "mtg-matrix/0.4",
       "schema_bound_arg_count": 12,
       "schema_bound_rate": 1.0,
       "schema_covered_tools": [
@@ -31,7 +31,7 @@
       "total_calls_scanned": 12
     }
   ],
-  "scanner_version": "mtg-matrix/0.3",
+  "scanner_version": "mtg-matrix/0.4",
   "thresholds": {
     "heuristic_scan_rate_max": 0.1
   }

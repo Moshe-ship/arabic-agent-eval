@@ -1,0 +1,116 @@
+name: bundle-diff
+
+# When a PR touches a bundle under bundles/, compute the diff against
+# the base branch's version of that same bundle and post the Markdown
+# summary as a sticky PR comment. Reviewers see score / CI / layer /
+# schema-coverage deltas at a glance.
+#
+# No-op for the first bundle (no base version to diff against) — the
+# workflow emits a "first bundle — no baseline to diff against" note
+# instead of failing.
+
+on:
+  pull_request:
+    paths:
+      - 'bundles/**'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          path: head
+          fetch-depth: 0
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          path: base
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install aae from PR head
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet ./head
+          python -m pip install --quiet 'mtg-guards @ git+https://github.com/Moshe-ship/mtg.git' || true
+
+      - name: Find changed bundle dirs
+        id: find
+        working-directory: head
+        run: |
+          set -e
+          dirs=$(git diff --name-only \
+                 "origin/${{ github.event.pull_request.base.ref }}...HEAD" \
+                 -- 'bundles/**/MANIFEST.json' \
+                 | xargs -n1 dirname 2>/dev/null | sort -u || true)
+          if [ -z "$dirs" ]; then
+            echo "no_bundles=true" >> "$GITHUB_OUTPUT"
+            echo "dirs=" >> "$GITHUB_OUTPUT"
+          else
+            echo "no_bundles=false" >> "$GITHUB_OUTPUT"
+            echo "dirs<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$dirs" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute diffs
+        if: steps.find.outputs.no_bundles != 'true'
+        id: diff
+        run: |
+          set -e
+          mkdir -p /tmp/diffs
+          touch /tmp/diffs/combined.md
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
+            head_bundle="head/$dir"
+            base_bundle="base/$dir"
+            echo "### Bundle: \`$dir\`" >> /tmp/diffs/combined.md
+            if [ ! -d "$base_bundle" ]; then
+              echo "_First bundle at this path — no baseline on \`${{ github.event.pull_request.base.ref }}\` to diff against._" \
+                >> /tmp/diffs/combined.md
+              echo "" >> /tmp/diffs/combined.md
+              continue
+            fi
+            if ! python head/scripts/diff_bundles.py \
+                 "$base_bundle" "$head_bundle" \
+                 --markdown /tmp/diffs/one.md 2>/tmp/diffs/err; then
+              echo "_diff_bundles.py failed:_" >> /tmp/diffs/combined.md
+              echo '```' >> /tmp/diffs/combined.md
+              cat /tmp/diffs/err >> /tmp/diffs/combined.md
+              echo '```' >> /tmp/diffs/combined.md
+              echo "" >> /tmp/diffs/combined.md
+              continue
+            fi
+            cat /tmp/diffs/one.md >> /tmp/diffs/combined.md
+            echo "" >> /tmp/diffs/combined.md
+          done <<< "${{ steps.find.outputs.dirs }}"
+          # Stash the combined body for the comment step
+          {
+            echo 'body<<EOF'
+            cat /tmp/diffs/combined.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post diff as sticky PR comment
+        if: steps.find.outputs.no_bundles != 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: bundle-diff
+          message: |
+            ## Bundle diff
+
+            ${{ steps.diff.outputs.body }}
+
+            _Automated by `.github/workflows/bundle-diff.yml`._

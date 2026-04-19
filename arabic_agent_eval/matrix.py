@@ -492,6 +492,37 @@ def _code_provenance() -> dict[str, str]:
     }
 
 
+def _fingerprint_benchmark_items(benchmark_result: "BenchmarkResult") -> str:
+    """Stable sha256 over the item IDs + categories + dialects + expected
+    calls that this benchmark run scored. Captures the dataset slice
+    that produced the row — two runs over different subsets of the
+    dataset produce different fingerprints even if the model is the
+    same.
+
+    Does NOT include actual_calls (the model output) or scores —
+    those vary per model and per run. Only the fixed input to the
+    scanner.
+    """
+    payload: list[dict] = []
+    for result in benchmark_result.results:
+        item = result.item
+        payload.append({
+            "id": item.id,
+            "category": item.category,
+            "dialect": item.dialect,
+            "difficulty": item.difficulty,
+            "expected_calls": [
+                {"function": c.function, "arguments": c.arguments}
+                for c in item.expected_calls
+            ],
+        })
+    payload.sort(key=lambda r: r["id"])
+    canonical = json.dumps(
+        payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def _new_run_metadata(
     benchmark_result: "BenchmarkResult",
     tool_schema_map: Optional[dict[str, dict]],
@@ -518,8 +549,9 @@ def _new_run_metadata(
         "n_errors": len(benchmark_result.errors),
         "schema_map_tools": sorted((tool_schema_map or {}).keys()),
         "schema_map_fingerprint": _fingerprint_schema_map(tool_schema_map),
+        "dataset_fingerprint": _fingerprint_benchmark_items(benchmark_result),
         "code_shas": _code_provenance(),
-        "scanner_version": "mtg-matrix/0.3",
+        "scanner_version": "mtg-matrix/0.4",
     }
 
 

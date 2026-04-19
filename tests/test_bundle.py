@@ -195,3 +195,48 @@ def test_load_bundle_rejects_manifest_has_runs_lie(tmp_path: Path):
     )
     with pytest.raises(BundleError, match="has_runs"):
         validate_bundle(out)
+
+
+# ---------- invocation provenance ----------
+
+
+def test_invocation_default_empty(tmp_path: Path):
+    """When no invocation dict is passed, manifest carries an empty one
+    (not a missing key) so downstream schemas are stable."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.invocation == {}
+
+
+def test_invocation_passed_through_to_manifest(tmp_path: Path):
+    """write_bundle's `invocation` kwarg lands in MANIFEST.json so
+    build_bundle.py can stamp the exact build-command context."""
+    matrix = _minimal_matrix()
+    invocation = {
+        "generator": "scripts/build_bundle.py",
+        "generator_version": "build_bundle/0.2",
+        "git_ref": "abc123",
+        "schema_map_source": "../hurmoz/tool-schemas",
+        "run_json_sha256": {"hermes.json": "deadbeef" * 8},
+    }
+    out = write_bundle(matrix, tmp_path / "bundle", invocation=invocation)
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.invocation == invocation
+
+
+def test_invocation_survives_round_trip_and_integrity(tmp_path: Path):
+    """Manifest integrity check must accept bundles with non-empty
+    invocation (the field is part of the signed manifest JSON but
+    not of the per-file sha256 checks)."""
+    matrix = _minimal_matrix()
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        invocation={"generator": "test", "generator_version": "0.0.1"},
+    )
+    manifest, _ = load_bundle(out)  # must not raise
+    assert manifest.invocation["generator"] == "test"

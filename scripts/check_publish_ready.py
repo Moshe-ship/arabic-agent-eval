@@ -37,7 +37,15 @@ if str(_REPO_ROOT) not in sys.path:
 from arabic_agent_eval.bundle import BundleError, DEFAULT_THRESHOLDS, load_bundle  # noqa: E402
 
 
-REQUIRED_METADATA_KEYS = ("run_id", "scanned_at", "provider", "model", "scanner_version")
+REQUIRED_METADATA_KEYS = (
+    "run_id", "scanned_at", "provider", "model", "scanner_version",
+    "dataset_fingerprint",
+)
+
+# Every MTG-stack package that was importable at scan time must carry
+# a non-empty git SHA. Packages not importable produce None in
+# code_shas and are considered absent (not failures).
+REQUIRED_CODE_SHA_PACKAGES = ("arabic_agent_eval",)
 
 
 def check_bundle(
@@ -93,7 +101,8 @@ def check_bundle(
         if missing:
             reasons.append(
                 f"{label}: run_metadata missing {missing} — every "
-                f"published row must trace back to a run_id + timestamp"
+                f"published row must trace back to a run_id + timestamp + "
+                f"dataset_fingerprint"
             )
 
         # schema_map_tools is expected in run_metadata — declares which
@@ -104,6 +113,20 @@ def check_bundle(
                 f"{label}: run_metadata missing `schema_map_tools` list — "
                 f"cannot verify which tool-schema map the scanner used"
             )
+
+        # code_shas must carry a non-empty git SHA for every REQUIRED
+        # package. Optional packages (mtg, toolproof) are permitted to
+        # be None if they weren't importable at scan time, but present
+        # packages must have captured their SHA.
+        code_shas = md.get("code_shas") or {}
+        for pkg in REQUIRED_CODE_SHA_PACKAGES:
+            sha = code_shas.get(pkg)
+            if not sha:
+                reasons.append(
+                    f"{label}: code_shas is missing a non-empty SHA for "
+                    f"`{pkg}` — cannot trace this row back to a specific "
+                    f"code revision. Re-run the scan from a git checkout."
+                )
 
         hsr = float(row.get("heuristic_scan_rate", 0.0))
         row_diagnostic = bool(row.get("diagnostic", False))

@@ -62,7 +62,7 @@ _DISCLAIMER_PREFIXES = ("synthetic:", "example:", "illustrative:", "hypothetical
 
 # Bundle reference regex — link to a file under bundles/ OR a mention
 # of a bundle path.
-_BUNDLE_REFERENCE = re.compile(r"bundles/[a-zA-Z0-9_\-./]+")
+_BUNDLE_REFERENCE = re.compile(r"bundles/([a-zA-Z0-9_\-.]+)(?:/[a-zA-Z0-9_\-./]*)?")
 
 _MARKDOWN_GLOBS = ("*.md", "*.MD", "*.markdown")
 
@@ -142,6 +142,48 @@ def _any_bundle_exists() -> bool:
     return any((child / "MANIFEST.json").exists() for child in bundles_dir.iterdir())
 
 
+def _existing_bundle_names() -> set[str]:
+    """Return bundle directory names currently present under `bundles/`
+    (only those with a MANIFEST.json). Used to detect stale citations."""
+    bundles_dir = _REPO_ROOT / "bundles"
+    if not bundles_dir.is_dir():
+        return set()
+    return {
+        child.name
+        for child in bundles_dir.iterdir()
+        if child.is_dir() and (child / "MANIFEST.json").exists()
+    }
+
+
+def _stale_bundle_citations(file: Path) -> list[tuple[int, str, str]]:
+    """Scan the full file (not just added lines) for bundle citations
+    that point at directories which no longer exist. Returns a list of
+    (line_no, line_text, stale_bundle_name).
+
+    Runs even on files the author didn't touch — a rename elsewhere
+    can invalidate citations here."""
+    try:
+        text = file.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    existing = _existing_bundle_names()
+    out: list[tuple[int, str, str]] = []
+    in_fence = False
+    for i, line in enumerate(text.splitlines(), start=1):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for match in _BUNDLE_REFERENCE.finditer(line):
+            bundle_name = match.group(1)
+            if "*" in bundle_name:
+                continue
+            if bundle_name not in existing:
+                out.append((i, line.strip(), bundle_name))
+    return out
+
+
 def _file_in_code_block(file: Path, line_no: int) -> bool:
     """Is line `line_no` (1-indexed) inside a fenced code block?"""
     try:
@@ -171,6 +213,26 @@ def check(base: str) -> list[str]:
     reasons: list[str] = []
     bundle_present = _any_bundle_exists()
     files = _changed_markdown_files(base)
+
+    # Stale-bundle scan — runs over every Markdown file, not just the
+    # ones changed in this PR. A rename or deletion elsewhere can
+    # invalidate a citation on a file the author didn't touch; still
+    # block the PR until docs catch up.
+    for pattern in ("**/*.md", "**/*.markdown"):
+        for p in _REPO_ROOT.glob(pattern):
+            rel = p.relative_to(_REPO_ROOT)
+            parts = rel.parts
+            if parts and parts[0] in ("bundles", "examples"):
+                continue
+            if ".git" in parts or "node_modules" in parts:
+                continue
+            for line_no, _line_text, bundle_name in _stale_bundle_citations(p):
+                reasons.append(
+                    f"{rel}:{line_no}: cites `bundles/{bundle_name}/` "
+                    f"which does not exist under `bundles/`. Update the "
+                    f"citation or restore the bundle."
+                )
+
     for md_file in files:
         # Allow the bundles/ index README to carry numbers freely —
         # it's literally quoting from a bundle it ships alongside.

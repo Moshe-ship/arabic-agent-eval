@@ -73,6 +73,20 @@ class BundleManifest:
     # Derived from `files` at write time; load_bundle recomputes to
     # guard against manifest edits that lie about it.
     has_runs: bool = False
+    # Invocation provenance — captures the exact build command inputs
+    # that produced this bundle. Stamped by `build_bundle.py` or any
+    # other wrapper that calls `write_bundle(invocation=...)`. Empty
+    # when the bundle was produced by direct library calls.
+    #
+    # Expected keys (all optional but recommended):
+    # - generator: "scripts/build_bundle.py" or equivalent
+    # - generator_version: pin
+    # - git_ref / git_branch: where the builder was invoked from
+    # - schema_map_source: the path the user passed, or "<default>"
+    # - run_json_sha256: {run_filename: sha256} per source run
+    # - built_at: ISO-8601 UTC (often equals created_at but distinct
+    #   so we can distinguish "build time" from "manifest write time")
+    invocation: dict[str, Any] = field(default_factory=dict)
     files: dict[str, str] = field(default_factory=dict)   # path → sha256
     thresholds: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_THRESHOLDS))
     row_summaries: list[dict[str, Any]] = field(default_factory=list)
@@ -84,6 +98,7 @@ class BundleManifest:
                 "scanner_version": self.scanner_version,
                 "created_at": self.created_at,
                 "has_runs": self.has_runs,
+                "invocation": self.invocation,
                 "files": self.files,
                 "thresholds": self.thresholds,
                 "row_summaries": self.row_summaries,
@@ -100,6 +115,7 @@ class BundleManifest:
             scanner_version=data.get("scanner_version", ""),
             created_at=data.get("created_at", ""),
             has_runs=bool(data.get("has_runs", False)),
+            invocation=dict(data.get("invocation", {})),
             files=dict(data.get("files", {})),
             thresholds=dict(data.get("thresholds", {})),
             row_summaries=list(data.get("row_summaries", [])),
@@ -145,6 +161,7 @@ def write_bundle(
     html: Optional[str] = None,
     run_json_files: Optional[list[Path]] = None,
     thresholds: Optional[dict[str, float]] = None,
+    invocation: Optional[dict[str, Any]] = None,
 ) -> Path:
     """Serialize a ResultMatrix into a canonical bundle directory.
 
@@ -209,6 +226,7 @@ def write_bundle(
         scanner_version=scanner_version,
         created_at=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         has_runs=bundle_has_runs,
+        invocation=dict(invocation or {}),
         files=written,
         thresholds=dict(thresholds or DEFAULT_THRESHOLDS),
         row_summaries=[_row_summary(r) for r in matrix.to_dict()["rows"]],

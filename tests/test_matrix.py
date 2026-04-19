@@ -672,6 +672,50 @@ def test_schema_map_fingerprint_ignores_editorial_changes():
     assert _fingerprint_schema_map(base) == _fingerprint_schema_map(edited)
 
 
+def test_run_metadata_carries_dataset_fingerprint():
+    """Every scan stamps a dataset_fingerprint derived from the items
+    that were scored. Two scans of the same subset produce the same
+    fingerprint; different subsets produce different ones."""
+    from arabic_agent_eval.matrix import _fingerprint_benchmark_items
+
+    br_a = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    br_b = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}]),
+                 _result("b", [{"function": "y", "arguments": {"q": "مرحبا"}}])],
+    )
+    fp_a = _fingerprint_benchmark_items(br_a)
+    fp_a2 = _fingerprint_benchmark_items(br_a)
+    fp_b = _fingerprint_benchmark_items(br_b)
+    assert fp_a == fp_a2          # deterministic
+    assert fp_a != fp_b           # different subsets → different fingerprint
+    assert len(fp_a) == 64        # sha256 hex
+
+    # Stamped onto every row's run_metadata
+    row = scan_with_mtg(br_a)
+    assert row.run_metadata["dataset_fingerprint"] == fp_a
+
+
+def test_dataset_fingerprint_ignores_model_output():
+    """Fingerprint covers only the fixed inputs — item IDs, categories,
+    dialects, expected_calls. Changing actual_calls (model output) or
+    score must not change it."""
+    from arabic_agent_eval.matrix import _fingerprint_benchmark_items
+
+    item = _result("a", [{"function": "x", "arguments": {"q": "أبي"}}],
+                    score_total=1.0)
+    item2 = _result("a", [{"function": "x", "arguments": {"q": "ابراهيم"}}],
+                     score_total=0.0)
+    br1 = BenchmarkResult(provider="p", model="m", results=[item])
+    br2 = BenchmarkResult(provider="p", model="m", results=[item2])
+    # Same item ID + expected_calls → same fingerprint even though
+    # actual_calls and score differ.
+    assert _fingerprint_benchmark_items(br1) == _fingerprint_benchmark_items(br2)
+
+
 def test_to_dict_surfaces_ci_and_heuristic_rate():
     br = BenchmarkResult(
         provider="t", model="m",

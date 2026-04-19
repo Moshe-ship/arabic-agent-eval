@@ -36,6 +36,8 @@ pre-commit check.
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
+import hashlib
 import json
 import subprocess
 import sys
@@ -52,6 +54,33 @@ from arabic_agent_eval.matrix import (  # noqa: E402
     load_benchmark_result_from_json,
     render_markdown,
 )
+
+BUILD_BUNDLE_VERSION = "build_bundle/0.2"
+
+
+def _git_ref() -> tuple[str, str]:
+    """Return (git_ref, git_branch) for the current checkout, or ("", "")
+    if not in a git repo or git is unavailable."""
+    try:
+        ref = subprocess.run(
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        ).stdout.strip()
+        branch = subprocess.run(
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "", ""
+    return ref, branch
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _load_schema_map(path: Path) -> dict[str, dict]:
@@ -170,11 +199,31 @@ def main() -> int:
 
     html = _try_build_html(matrix) if args.html else None
 
+    # Invocation provenance — freeze the exact build-command context so
+    # reviewers can reproduce this bundle from scratch.
+    git_ref, git_branch = _git_ref()
+    run_shas: dict[str, str] = {
+        run.name: _sha256_file(run) for run in args.run
+    }
+    invocation = {
+        "generator": "scripts/build_bundle.py",
+        "generator_version": BUILD_BUNDLE_VERSION,
+        "built_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        "git_ref": git_ref,
+        "git_branch": git_branch,
+        "schema_map_source": str(args.schemas) if args.schemas else "<default>",
+        "run_json_sha256": run_shas,
+        "html_requested": bool(args.html),
+        "gate_invoked": bool(args.gate),
+        "gate_allow_diagnostic": bool(args.gate_allow_diagnostic),
+    }
+
     bundle_path = write_bundle(
         matrix,
         args.out,
         html=html,
         run_json_files=list(args.run),
+        invocation=invocation,
     )
     print(f"wrote bundle → {bundle_path}")
 

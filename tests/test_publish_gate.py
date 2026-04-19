@@ -237,6 +237,59 @@ def test_gate_rejects_all_diagnostic_bundle_even_with_allow_diagnostic(tmp_path:
     assert "theater" in result.stderr or "non-diagnostic" in result.stderr
 
 
+def test_gate_requires_dataset_fingerprint(tmp_path: Path):
+    """Provenance freeze: rows without a dataset_fingerprint can't be
+    traced back to which items produced them — gate rejects."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        row["run_metadata"].pop("dataset_fingerprint", None)
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle)
+    assert result.returncode != 0
+    assert "dataset_fingerprint" in result.stderr
+
+
+def test_gate_requires_code_sha_for_aae(tmp_path: Path):
+    """Provenance freeze: the aae package SHA is required — no SHA
+    means no traceable code revision."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        row["run_metadata"]["code_shas"] = {
+            "arabic_agent_eval": None, "mtg": None, "toolproof": None,
+        }
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle)
+    assert result.returncode != 0
+    assert "code_shas" in result.stderr
+    assert "arabic_agent_eval" in result.stderr
+
+
 def test_gate_flags_missing_schema_map_tools(tmp_path: Path):
     """run_metadata must carry schema_map_tools so the provenance of
     the scanner's schema coverage is auditable."""

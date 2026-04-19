@@ -33,17 +33,18 @@
       "repaired_score": 0.9,
       "run_metadata": {
         "code_shas": {
-          "arabic_agent_eval": "eb9c4084af8ca9347b3ffcea23b41c5309d266f7",
+          "arabic_agent_eval": "db3f68ef235c3b972b7a03a90bb96bd69f61717f",
           "mtg": "1223861d25664ffcd0e34b34efc8b381e054b996",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
+        "dataset_fingerprint": "9f6dfaf8fcfd6c7dca3fbf5bde2a3602b0bab8eb32500b14cc58ebca93f90696",
         "model": "synthetic-v1",
         "n_errors": 0,
         "n_items": 5,
         "provider": "example",
-        "run_id": "8bc4d68e-8a7b-408d-8e7d-c40984a7c935",
-        "scanned_at": "2026-04-19T14:21:14+00:00",
-        "scanner_version": "mtg-matrix/0.3",
+        "run_id": "87b62e0f-597e-4457-841a-6eee3f73b34e",
+        "scanned_at": "2026-04-19T23:46:39+00:00",
+        "scanner_version": "mtg-matrix/0.4",
         "schema_map_fingerprint": "dc25f3e8e793048deeeb47e7c3785501e5faf49fc37bcd5b715e90a2fcd3bf8a",
         "schema_map_tools": [
           "arabic_grammar_correct",
