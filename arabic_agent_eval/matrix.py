@@ -67,7 +67,22 @@ _CODE_TO_FAMILY: dict[str, str] = {
     "BACKEND_DISAGREEMENT": "canonicalization",
 }
 
-_FAMILY_ORDER = ("bidi", "homoglyph", "script", "dialect", "canonicalization", "overflow")
+# Precedence: security (bidi, homoglyph) > content (script,
+# canonicalization) > linguistic (dialect, overflow). `_classify_family`
+# walks this list and returns the first match, so earlier entries are
+# worse. Matches the docstring on `_classify_family` and the grouping
+# comments in `_CODE_TO_FAMILY`.
+_FAMILY_ORDER = (
+    # security
+    "bidi",
+    "homoglyph",
+    # content correctness
+    "script",
+    "canonicalization",
+    # linguistic
+    "dialect",
+    "overflow",
+)
 
 
 def _classify_family(codes: set[str]) -> Optional[str]:
@@ -152,16 +167,41 @@ def _guess_spec_for_value(value: str) -> GuardSpec:
     attached. Used when we only have the model's emitted calls and want
     to run them through MTG as a diagnostic layer.
 
-    Heuristic: if value contains any Arabic character, assume it's an
-    ar-declared free-text slot in reconciled mode. If value is pure
-    Latin, assume latn free-text. Never raises; never mutates input.
+    Heuristic, ordered:
+
+    1. If value contains any Arabic character → ar-declared free-text.
+    2. Else if value looks like Arabizi (Romanized Arabic, digit-letter
+       substitutions) → ar-declared free-text with
+       transliteration_allowed=false, so TRANSLITERATION_VIOLATION fires
+       and reconciled mode can propose an arabizi_to_arabic repair.
+    3. Else → latn free-text (pure English / identifiers / no Arabic
+       intent detected).
+
+    This is a heuristic; the truth lives in the tool schema. Callers
+    with schemas should wrap tools via mtg.adapters.openai.guard_tool
+    instead of relying on this fallback.
     """
     has_arabic = any("\u0600" <= ch <= "\u06FF" for ch in value)
+    if has_arabic:
+        script = "ar"
+        translit_allowed = False
+    else:
+        try:
+            from mtg.translit import looks_like_arabizi
+            arabizi = looks_like_arabizi(value)
+        except ImportError:  # pragma: no cover
+            arabizi = False
+        if arabizi:
+            script = "ar"
+            translit_allowed = False
+        else:
+            script = "latn"
+            translit_allowed = True
     return GuardSpec.from_dict(
         {
             "slot_type": "free_text",
-            "script": "ar" if has_arabic else "latn",
-            "transliteration_allowed": not has_arabic,
+            "script": script,
+            "transliteration_allowed": translit_allowed,
             "mode": "reconciled",
         },
         validate=True,
@@ -208,9 +248,12 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
     # Repair quality — compute score_repair() on every concrete proposal
     # and average. None stays None if no concrete repairs were seen.
     quality_scores: list[float] = []
-    # For repaired_score: per-item, if EVERY Arabic arg got a concrete
-    # repair, treat the item as "could have been fixed"; contributes
-    # baseline-or-1.0 to repaired_score depending on the original score.
+    # For repaired_score: an item counts as fully recoverable ONLY if
+    # every violated arg got a concrete repair. If even one violated
+    # arg has no repair proposal, the item stays at its original score.
+    # This matches the header comment on repaired_score — the earlier
+    # implementation flipped on first repair and over-credited multi-arg
+    # items with partial coverage.
     repaired_item_scores: dict[str, float] = {}
 
     from mtg.repair import score_repair  # deferred for the optional-mtg case
@@ -219,8 +262,8 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
         if result.error:
             continue
         original_total = result.score.total
-        item_could_repair = False
-        item_had_violations = False
+        item_violated_args = 0
+        item_repaired_args = 0
         for _item_id, _arg_name, arg_value in _iter_call_values(result):
             if not isinstance(arg_value, str) or not arg_value:
                 continue
@@ -234,7 +277,7 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
             codes = {v.code for v in guard.violations}
             if guard.violations:
                 violation_hits += 1
-                item_had_violations = True
+                item_violated_args += 1
                 family = _classify_family(codes)
                 if family:
                     family_hits[family] += 1
@@ -249,7 +292,11 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
 
             if guard.repaired_surface:
                 repair_hits += 1
-                item_could_repair = True
+                # Only count this repair toward item recoverability if
+                # the arg actually had a violation — an unsolicited repair
+                # on a clean arg doesn't offset a different arg's failure.
+                if guard.violations:
+                    item_repaired_args += 1
             # Score every concrete repair the scanner proposed, not just
             # the chosen repaired_surface. That way advisory-only actions
             # (suggest_dialect_rewrite) don't inflate the count but every
@@ -261,7 +308,8 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
                     score_repair(repair.original, repair.proposed, repair.action, spec)
                 )
 
-        if item_had_violations and item_could_repair:
+        # Fully recoverable only when EVERY violated arg was repaired.
+        if item_violated_args > 0 and item_repaired_args == item_violated_args:
             repaired_item_scores[result.item.id] = 1.0
         else:
             repaired_item_scores[result.item.id] = original_total

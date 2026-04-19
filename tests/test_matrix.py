@@ -196,3 +196,129 @@ def test_scan_without_mtg_raises_clean_error(monkeypatch):
     monkeypatch.setattr(m, "_MTG_AVAILABLE", False)
     with pytest.raises(RuntimeError, match="mtg-guards"):
         m.scan_with_mtg(BenchmarkResult(provider="x", model="y", results=[]))
+
+
+# ---------- taxonomy precedence ----------
+
+
+def test_family_precedence_content_beats_linguistic():
+    """Regression: an arg that emits both a canonicalization violation
+    (content) and a dialect violation (linguistic) must bucket under
+    canonicalization, matching the docstring 'security > content >
+    linguistic'."""
+    from arabic_agent_eval.matrix import _classify_family
+
+    codes = {"CANONICALIZATION_REQUIRED", "DIALECT_DRIFT"}
+    assert _classify_family(codes) == "canonicalization"
+
+
+def test_family_precedence_script_beats_dialect():
+    """Script (content) outranks dialect (linguistic)."""
+    from arabic_agent_eval.matrix import _classify_family
+
+    codes = {"SCRIPT_VIOLATION", "DIALECT_DRIFT"}
+    assert _classify_family(codes) == "script"
+
+
+def test_family_precedence_security_beats_content():
+    """BiDi (security) outranks script (content)."""
+    from arabic_agent_eval.matrix import _classify_family
+
+    codes = {"BIDI_CONTROL_SMUGGLING", "SCRIPT_VIOLATION"}
+    assert _classify_family(codes) == "bidi"
+
+
+def test_family_precedence_homoglyph_outranks_canonicalization():
+    from arabic_agent_eval.matrix import _classify_family
+
+    codes = {"SCRIPT_HOMOGLYPH", "CANONICALIZATION_REQUIRED"}
+    assert _classify_family(codes) == "homoglyph"
+
+
+def test_family_precedence_dialect_only_still_classifies():
+    from arabic_agent_eval.matrix import _classify_family
+
+    assert _classify_family({"DIALECT_DRIFT"}) == "dialect"
+
+
+# ---------- repaired_score inflation ----------
+
+
+def test_repaired_score_requires_every_violated_arg_repaired():
+    """Regression: an item with two violated args where only ONE gets a
+    concrete repair must NOT be credited as fully recoverable (score=1.0).
+    The earlier implementation flipped item_could_repair on the first
+    repaired arg and over-credited partial coverage."""
+    # Arg A: Arabic with BiDi RLO → BIDI_CONTROL_SMUGGLING, NOT repairable
+    #        (bidi repairs are not in suggest_repairs policy).
+    # Arg B: Arabizi → SCRIPT + TRANSLIT violations → arabizi_to_arabic repair.
+    # Item has 2 violated args, only 1 repairable → must stay at original.
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result(
+            "multi_arg",
+            [{"function": "send_message", "arguments": {
+                "first":  "أبي\u202eأحجز",      # BiDi smuggling, no repair
+                "second": "abi a7jez funduq",   # Arabizi, concrete repair
+            }}],
+            score_total=0.0,
+        )],
+    )
+    row = scan_with_mtg(br)
+    # Two violated args, only one repair — item is NOT fully recoverable.
+    # repaired_score should equal baseline_score (both 0.0 here).
+    assert row.repaired_score == pytest.approx(row.baseline_score)
+
+
+def test_repaired_score_full_credit_when_all_violated_args_repaired():
+    """When every violated arg gets a concrete repair, the item IS
+    fully recoverable → repaired_score = 1.0 for that item."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result(
+            "all_repairable",
+            [{"function": "send_message", "arguments": {
+                "msg": "abi a7jez",  # single violated arg, gets repair
+            }}],
+            score_total=0.0,
+        )],
+    )
+    row = scan_with_mtg(br)
+    # 1 violated arg, 1 repaired → fully recoverable
+    assert row.repaired_score == 1.0
+
+
+def test_repaired_score_unchanged_when_no_violations():
+    """Clean item: no violations, no repairs — repaired_score equals
+    baseline_score exactly (not inflated)."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result(
+            "clean",
+            [{"function": "send_message", "arguments": {"msg": "أبي أحجز"}}],
+            score_total=0.8,
+        )],
+    )
+    row = scan_with_mtg(br)
+    assert row.repaired_score == pytest.approx(0.8)
+
+
+def test_repaired_score_ignores_unsolicited_repairs_on_clean_args():
+    """A repair proposal on a CLEAN arg (no violation) must not offset
+    a DIFFERENT arg's unrepaired violation. The invariant is: count
+    only those repairs that actually answered a violation."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result(
+            "mixed",
+            [{"function": "send_message", "arguments": {
+                "clean_arg": "أبي أحجز",             # clean, no repair needed
+                "broken_arg": "هذا نص طويل باللغة العربية لكن به شيء غريب",
+            }}],
+            score_total=0.5,
+        )],
+    )
+    row = scan_with_mtg(br)
+    # No violations here — both args are legitimate Arabic. Just assert
+    # no spurious upgrade happens.
+    assert row.repaired_score == pytest.approx(0.5)
