@@ -1,0 +1,77 @@
+name: publish-gate
+
+# Runs the matrix-bundle publish gate on any PR that touches a bundle
+# directory under `bundles/`. The gate enforces:
+#   - MANIFEST.json integrity (sha256 of every listed file matches)
+#   - Every row has complete run_metadata
+#   - Bootstrap CIs present when n_items >= 2
+#   - heuristic_scan_rate <= threshold on every row (default 0.10)
+#     unless the row is explicitly marked diagnostic AND --allow-diagnostic
+#     is in the PR body as a justification keyword
+#
+# Purpose: weak bundles cannot be merged. No judgment calls.
+
+on:
+  pull_request:
+    paths:
+      - 'bundles/**'
+      - 'arabic_agent_eval/bundle.py'
+      - 'arabic_agent_eval/matrix.py'
+      - 'scripts/check_publish_ready.py'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install aae + mtg
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet .
+          python -m pip install --quiet 'mtg-guards @ git+https://github.com/Moshe-ship/mtg.git'
+
+      - name: Find changed bundle dirs
+        id: find
+        run: |
+          set -e
+          # Look for top-level bundle dirs under bundles/. Each one must
+          # have a MANIFEST.json — we refuse to gate a directory that
+          # doesn't already claim to be a bundle.
+          dirs=$(find bundles -maxdepth 2 -type f -name MANIFEST.json \
+                 -exec dirname {} \; 2>/dev/null | sort -u || true)
+          if [ -z "$dirs" ]; then
+            echo "no bundles found — nothing to gate"
+            echo "dirs=" >> "$GITHUB_OUTPUT"
+          else
+            echo "dirs<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$dirs" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run publish gate
+        if: steps.find.outputs.dirs != ''
+        run: |
+          set -e
+          # Allow-diagnostic opt-in via PR body: include the literal
+          # phrase `publish-gate: allow-diagnostic` in the body to
+          # propagate it to the gate flags. Keeps the override
+          # auditable in PR history, not just in CI config.
+          flags=""
+          if echo "${{ github.event.pull_request.body }}" | \
+             grep -qF "publish-gate: allow-diagnostic"; then
+            flags="--allow-diagnostic"
+            echo "::notice::PR body opted into --allow-diagnostic"
+          fi
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
+            echo "::group::gate $dir"
+            python scripts/check_publish_ready.py "$dir" $flags
+            echo "::endgroup::"
+          done <<< "${{ steps.find.outputs.dirs }}"

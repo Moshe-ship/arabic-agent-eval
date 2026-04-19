@@ -169,11 +169,37 @@ class MatrixRow:
     # Reproducibility metadata — stamped at scan time so downstream
     # can deduplicate runs and answer "which model version, when".
     run_metadata: dict[str, Any] = field(default_factory=dict)
+    # Threshold used to decide whether this row is diagnostic-only.
+    # Set by the scanner so downstream (bundles, publish gates) uses
+    # the same value that was recorded when the numbers were produced.
+    heuristic_scan_threshold: float = 0.10
+
+    @property
+    def diagnostic(self) -> bool:
+        """True when this row should not be published as a clean result.
+
+        Fires when any of the publish-gate prerequisites fail:
+
+        - `heuristic_scan_rate` exceeds `heuristic_scan_threshold`
+          (schema-bound replay didn't cover enough of the args)
+        - `run_metadata` is missing or empty (no provenance)
+
+        Callers that deliberately publish a diagnostic run should
+        render the marker, NOT suppress it. The point is making the
+        caveat visible, not hiding it.
+        """
+        if not self.run_metadata:
+            return True
+        if self.heuristic_scan_rate > self.heuristic_scan_threshold:
+            return True
+        return False
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "model": self.model,
+            "diagnostic": self.diagnostic,
+            "heuristic_scan_threshold": self.heuristic_scan_threshold,
             "baseline_score": round(self.baseline_score, 4),
             "baseline_ci_95": (
                 [round(self.baseline_ci_95[0], 4), round(self.baseline_ci_95[1], 4)]
@@ -588,14 +614,22 @@ def render_markdown(matrix: ResultMatrix) -> str:
         return f"{score:.3f} ({ci[0]:.3f}–{ci[1]:.3f})"
 
     main_rows = []
+    diagnostic_rows: list[str] = []
     for row in matrix.rows:
         delta = row.repaired_score - row.baseline_score
         cost = f"${row.total_cost_usd:.3f}" if row.total_cost_usd is not None else "—"
         latency = f"{row.median_latency_ms:.0f}" if row.median_latency_ms is not None else "—"
+        # ⚠ prefix on provider name when the row failed the publish
+        # gate's prerequisites (excess heuristic fallback, missing
+        # provenance). Publish the marker; never hide it.
+        marker = "⚠ " if row.diagnostic else ""
+        if row.diagnostic:
+            diagnostic_rows.append(f"{row.provider}/{row.model}")
         main_rows.append(
-            "| {prov} | {model} | {base} | {rep} | {delta:+.3f} | "
+            "| {marker}{prov} | {model} | {base} | {rep} | {delta:+.3f} | "
             "{v:.1%} | {t:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | {hs:.1%} | "
             "{items} | {calls} | {cost} | {lat} |".format(
+                marker=marker,
                 prov=row.provider, model=row.model,
                 base=_fmt_ci(row.baseline_score, row.baseline_ci_95),
                 rep=_fmt_ci(row.repaired_score, row.repaired_ci_95),
@@ -681,12 +715,22 @@ def render_markdown(matrix: ResultMatrix) -> str:
         "`baseline` and `repaired` include bootstrap 95% CIs over the "
         "items scored (within-run variance only — NOT model-run variance). "
         "`heur. scan %` reports the fraction of args scored via the "
-        "heuristic fallback; high values mean the result is diagnostic, "
-        "not schema-grounded.",
+        "heuristic fallback; rows with `heur. scan > 10%` are marked "
+        "⚠ diagnostic and must not be published as clean results.",
         "",
         main_header,
         *main_rows,
         "",
+    ]
+    if diagnostic_rows:
+        parts.extend([
+            f"> ⚠ **{len(diagnostic_rows)} row(s) marked diagnostic** — "
+            f"not schema-grounded enough to publish as a clean result: "
+            f"{', '.join(diagnostic_rows)}. Re-run with annotated "
+            f"tool-schema map or label these rows diagnostic.",
+            "",
+        ])
+    parts.extend([
         "## 3-layer taxonomy",
         "",
         "Each failing argument is classified into exactly one layer. "
@@ -704,7 +748,7 @@ def render_markdown(matrix: ResultMatrix) -> str:
         "",
         fam_header,
         *fam_rows,
-    ]
+    ])
     if quality_rows:
         parts.extend([
             "",
