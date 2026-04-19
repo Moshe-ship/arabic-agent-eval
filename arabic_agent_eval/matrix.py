@@ -4,15 +4,18 @@ Take a completed `BenchmarkResult` (produced by Evaluator against any
 provider), replay every emitted tool call through MTG's validation
 pipeline, and aggregate the hard-result-table numbers:
 
-- baseline function-calling score
+- baseline function-calling score (+ bootstrap 95% CI over items)
 - MTG violation rate (per item, per call, per code)
-- transliteration rate (fraction of Arabic-valued args that the model
-  returned in a non-Arabic script)
-- dialect-drift rate (for dialect-bound items)
-- repaired score after reconciled-mode repair (where MTG can propose a
-  concrete replacement)
-- cost / latency deltas — captured if the caller populates `cost_usd`
-  and `latency_ms` on EvalResult
+- transliteration / dialect-drift / BiDi / homoglyph rates
+- 3-layer taxonomy: surface correctness, language integrity, security
+  integrity (reviewer-requested framing, April 2026)
+- repaired score (+ bootstrap CI) when reconciled mode can propose a
+  concrete replacement
+- cost / latency deltas — opt-in if caller populates EvalResult
+- heuristic_scan_rate — fraction of args scored without a schema. The
+  primary path is schema-bound replay (`scan_with_schemas`); the
+  heuristic exists only as last-resort fallback when a tool schema has
+  no x-mtg annotations.
 
 Deliberately decoupled from model providers — this module does NOT make
 API calls. Run your provider matrix the usual way (via Evaluator), then
@@ -25,7 +28,10 @@ a blog post or paper.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
+import random
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Optional, TYPE_CHECKING
@@ -85,6 +91,22 @@ _FAMILY_ORDER = (
 )
 
 
+# 3-layer taxonomy (reviewer framing, April 2026). Each family maps to
+# exactly one layer. Surface correctness = schema-shape failures (tool
+# choice + arg script/type validity). Language integrity = register,
+# morphology, canonicalization, register-overflow. Security integrity =
+# Unicode-layer attacks (BiDi, homoglyph, invisibles).
+_FAMILY_TO_LAYER: dict[str, str] = {
+    "script": "surface",
+    "canonicalization": "language",
+    "dialect": "language",
+    "overflow": "language",
+    "bidi": "security",
+    "homoglyph": "security",
+}
+_LAYERS = ("surface", "language", "security")
+
+
 def _classify_family(codes: set[str]) -> Optional[str]:
     """Pick one failure family for an arg given the violation codes
     it emitted. Worst family wins (security > content > linguistic)."""
@@ -94,6 +116,11 @@ def _classify_family(codes: set[str]) -> Optional[str]:
     return None
 
 
+def _classify_layer(family: Optional[str]) -> Optional[str]:
+    """Map a failure family into its 3-layer bucket."""
+    return _FAMILY_TO_LAYER.get(family) if family else None
+
+
 @dataclass
 class MatrixRow:
     """One row of the result table — typically a (provider, model) pair."""
@@ -101,6 +128,10 @@ class MatrixRow:
     provider: str
     model: str
     baseline_score: float = 0.0
+    # Within-run 95% CI via bootstrap over items. Captures variance
+    # from the specific subset of items scored, NOT model run-to-run
+    # variance — that requires repeated runs (aggregate externally).
+    baseline_ci_95: Optional[tuple[float, float]] = None
     # MTG re-validation aggregates
     total_calls_scanned: int = 0
     violation_rate: float = 0.0
@@ -111,10 +142,22 @@ class MatrixRow:
     # Why-failed taxonomy — every failing arg is assigned one family
     # (worst wins). Sum of family rates ≤ violation_rate.
     family_rates: dict[str, float] = field(default_factory=dict)
+    # 3-layer taxonomy — surface (schema-shape failures), language
+    # (register / morphology / canonicalization), security (Unicode-
+    # layer attacks). Each layer_rate is the fraction of scanned args
+    # whose worst violation falls in that layer. Reviewer-requested
+    # framing that makes the stack easier to explain.
+    layer_rates: dict[str, float] = field(default_factory=dict)
+    # Fraction of scanned args that had NO x-mtg schema annotation and
+    # fell back to the heuristic spec. Schema-bound replay is the
+    # primary path; this tells the reader how much they're trusting
+    # the heuristic. Target: <0.1 for any published claim.
+    heuristic_scan_rate: float = 0.0
     # Repair path
     calls_with_concrete_repair: int = 0
     repair_rate: float = 0.0
     repaired_score: float = 0.0  # baseline_score if repaired args were used
+    repaired_ci_95: Optional[tuple[float, float]] = None
     # Repair quality — mean score across every concrete repair the
     # scanner saw. 1.0 = clean repair, 0.5 = needs review, 0.0 = broken.
     repair_quality_mean: Optional[float] = None
@@ -123,19 +166,32 @@ class MatrixRow:
     total_cost_usd: Optional[float] = None
     median_latency_ms: Optional[float] = None
     total_items: int = 0
+    # Reproducibility metadata — stamped at scan time so downstream
+    # can deduplicate runs and answer "which model version, when".
+    run_metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "model": self.model,
             "baseline_score": round(self.baseline_score, 4),
+            "baseline_ci_95": (
+                [round(self.baseline_ci_95[0], 4), round(self.baseline_ci_95[1], 4)]
+                if self.baseline_ci_95 is not None else None
+            ),
             "repaired_score": round(self.repaired_score, 4),
+            "repaired_ci_95": (
+                [round(self.repaired_ci_95[0], 4), round(self.repaired_ci_95[1], 4)]
+                if self.repaired_ci_95 is not None else None
+            ),
             "violation_rate": round(self.violation_rate, 4),
             "transliteration_rate": round(self.transliteration_rate, 4),
             "dialect_drift_rate": round(self.dialect_drift_rate, 4),
             "bidi_violation_rate": round(self.bidi_violation_rate, 4),
             "homoglyph_rate": round(self.homoglyph_rate, 4),
             "family_rates": {k: round(v, 4) for k, v in self.family_rates.items()},
+            "layer_rates": {k: round(v, 4) for k, v in self.layer_rates.items()},
+            "heuristic_scan_rate": round(self.heuristic_scan_rate, 4),
             "repair_rate": round(self.repair_rate, 4),
             "repair_quality_mean": (
                 round(self.repair_quality_mean, 4)
@@ -149,6 +205,7 @@ class MatrixRow:
                 round(self.total_cost_usd, 4) if self.total_cost_usd is not None else None
             ),
             "median_latency_ms": self.median_latency_ms,
+            "run_metadata": dict(self.run_metadata),
         }
 
 
@@ -160,6 +217,68 @@ class ResultMatrix:
 
     def to_dict(self) -> dict[str, Any]:
         return {"rows": [r.to_dict() for r in self.rows]}
+
+
+def _build_default_schema_map() -> dict[str, dict]:
+    """Build {function_name: tool_schema} from arabic_agent_eval.functions.
+
+    Safe default for schema-bound replay when the caller doesn't pass
+    one. The FUNCTIONS registry does NOT ship x-mtg annotations by
+    default, so this map gives us the function names we can recognize
+    but schema-bound lookup will still fall back to heuristic for every
+    arg — that's the honest state and the heuristic_scan_rate surfaces
+    it in output.
+
+    Callers who want real schema-bound behavior should pass their own
+    annotated tool-schema map (e.g. from Hurmoz tool-schemas/*.json).
+    """
+    from arabic_agent_eval.functions import FUNCTIONS
+    return {fn["name"]: fn for fn in FUNCTIONS}
+
+
+def _extract_x_mtg_for_arg(
+    tool_schema: Optional[dict],
+    arg_name: str,
+) -> Optional[dict]:
+    """Pull the x-mtg block for one argument from a tool schema, if any.
+    Supports both OpenAI-shape (`parameters.properties`) and
+    Anthropic-shape (`input_schema.properties`)."""
+    if not tool_schema:
+        return None
+    for key in ("parameters", "input_schema"):
+        container = tool_schema.get(key)
+        if isinstance(container, dict):
+            props = container.get("properties") or {}
+            prop = props.get(arg_name)
+            if isinstance(prop, dict) and "x-mtg" in prop:
+                return prop["x-mtg"]
+    return None
+
+
+def _spec_for_arg(
+    tool_schema: Optional[dict],
+    arg_name: str,
+    arg_value: str,
+) -> tuple[GuardSpec, bool]:
+    """Primary spec resolution: schema-bound replay when the tool schema
+    declares x-mtg on this arg; heuristic fallback otherwise.
+
+    Returns `(spec, heuristic_scan)` — downstream uses the flag to
+    compute heuristic_scan_rate so readers can tell how much of a
+    result is schema-grounded vs best-effort.
+    """
+    x_mtg = _extract_x_mtg_for_arg(tool_schema, arg_name)
+    if x_mtg:
+        # Force reconciled mode so repairs surface even if the schema
+        # ships a different mode. The evaluator calls this for the
+        # diagnostic pass; production consumers keep their schema's mode.
+        x_mtg = {**x_mtg, "mode": "reconciled"}
+        try:
+            return GuardSpec.from_dict(x_mtg, validate=True), False
+        except Exception:
+            # Malformed schema x-mtg → drop to heuristic rather than crash.
+            pass
+    return _guess_spec_for_value(arg_value), True
 
 
 def _guess_spec_for_value(value: str) -> GuardSpec:
@@ -208,33 +327,101 @@ def _guess_spec_for_value(value: str) -> GuardSpec:
     )
 
 
-def _iter_call_values(eval_result: "EvalResult") -> Iterable[tuple[str, str, Any]]:
-    """Yield (item_id, arg_name, arg_value) for each argument in each actual call."""
+def _iter_call_values(
+    eval_result: "EvalResult",
+) -> Iterable[tuple[str, str, str, Any]]:
+    """Yield (item_id, tool_name, arg_name, arg_value) for each argument
+    in each actual call. The tool_name lets the scanner look up the
+    tool schema for schema-bound replay."""
     for call in eval_result.actual_calls or []:
+        tool_name = call.get("function") or call.get("name") or ""
         args = call.get("arguments") or call.get("args") or {}
         if not isinstance(args, dict):
             continue
         for arg_name, arg_value in args.items():
-            yield eval_result.item.id, arg_name, arg_value
+            yield eval_result.item.id, tool_name, arg_name, arg_value
 
 
-def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
-    """Replay every emitted tool-call argument through MTG and produce
-    a single MatrixRow for this benchmark run.
+def _bootstrap_ci_95(
+    values: list[float],
+    n_iter: int = 1000,
+    seed: int = 0xC15,
+) -> Optional[tuple[float, float]]:
+    """Bootstrap 95% CI on the mean of `values`.
 
-    Does NOT call any LLM. Does NOT make network calls. Pure aggregation
-    over values the caller already captured.
+    Resamples with replacement `n_iter` times; returns the 2.5 / 97.5
+    percentile of the bootstrap-mean distribution. Scope is ONLY the
+    within-run variance from which items were scored — NOT model
+    run-to-run variance (that requires multiple runs).
+
+    Returns None when there's no signal to resample (≤1 value).
+    """
+    if len(values) < 2:
+        return None
+    rng = random.Random(seed)
+    n = len(values)
+    means: list[float] = []
+    for _ in range(n_iter):
+        sample = [values[rng.randrange(n)] for _ in range(n)]
+        means.append(sum(sample) / n)
+    means.sort()
+    lo_idx = int(0.025 * n_iter)
+    hi_idx = int(0.975 * n_iter)
+    return (means[lo_idx], means[hi_idx])
+
+
+def _new_run_metadata(
+    benchmark_result: "BenchmarkResult",
+    tool_schema_map: Optional[dict[str, dict]],
+) -> dict[str, Any]:
+    """Stamp provenance on this scan so downstream consumers can
+    deduplicate runs and trace back which inputs produced a table."""
+    return {
+        "run_id": str(uuid.uuid4()),
+        "scanned_at": _dt.datetime.now(_dt.timezone.utc).isoformat(
+            timespec="seconds"
+        ),
+        "provider": benchmark_result.provider,
+        "model": benchmark_result.model,
+        "n_items": benchmark_result.total_items,
+        "n_errors": len(benchmark_result.errors),
+        "schema_map_tools": sorted((tool_schema_map or {}).keys()),
+        "scanner_version": "mtg-matrix/0.2",
+    }
+
+
+def scan_with_schemas(
+    benchmark_result: "BenchmarkResult",
+    tool_schema_map: Optional[dict[str, dict]] = None,
+) -> MatrixRow:
+    """Schema-bound replay — the primary scanner path.
+
+    For every emitted argument, look up the tool schema by function
+    name, pull the `x-mtg` block for that argument if present, and
+    derive the `GuardSpec` from the declared slot constraints. If the
+    schema lacks x-mtg (or the tool isn't in the map), fall back to the
+    heuristic `_guess_spec_for_value` — and mark the arg in the
+    `heuristic_scan_rate` so the reader knows how much of the result is
+    schema-grounded vs best-effort.
+
+    `tool_schema_map` is `{function_name: tool_schema_dict}`. When
+    None, uses arabic_agent_eval.functions.FUNCTIONS as the default
+    (function names recognized, but no x-mtg — heuristic will dominate
+    until the caller provides annotated schemas).
     """
     if not _MTG_AVAILABLE:
         raise RuntimeError(
             "mtg-guards is not installed; install it to run MTG-assisted scoring"
         )
+    if tool_schema_map is None:
+        tool_schema_map = _build_default_schema_map()
 
     row = MatrixRow(
         provider=benchmark_result.provider,
         model=benchmark_result.model,
         baseline_score=benchmark_result.overall_score,
         total_items=benchmark_result.total_items,
+        run_metadata=_new_run_metadata(benchmark_result, tool_schema_map),
     )
 
     violation_hits = 0
@@ -243,36 +430,39 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
     bidi_hits = 0
     homoglyph_hits = 0
     total_calls = 0
+    heuristic_calls = 0
     repair_hits = 0
     family_hits: dict[str, int] = {fam: 0 for fam in _FAMILY_ORDER}
-    # Repair quality — compute score_repair() on every concrete proposal
-    # and average. None stays None if no concrete repairs were seen.
+    layer_hits: dict[str, int] = {lay: 0 for lay in _LAYERS}
     quality_scores: list[float] = []
-    # For repaired_score: an item counts as fully recoverable ONLY if
-    # every violated arg got a concrete repair. If even one violated
-    # arg has no repair proposal, the item stays at its original score.
-    # This matches the header comment on repaired_score — the earlier
-    # implementation flipped on first repair and over-credited multi-arg
-    # items with partial coverage.
-    repaired_item_scores: dict[str, float] = {}
+    # Per-item scores for bootstrap — one entry per non-errored item.
+    baseline_item_scores: list[float] = []
+    repaired_item_scores_list: list[float] = []
 
-    from mtg.repair import score_repair  # deferred for the optional-mtg case
+    from mtg.repair import score_repair
 
     for result in benchmark_result.results:
         if result.error:
             continue
         original_total = result.score.total
+        baseline_item_scores.append(original_total)
         item_violated_args = 0
         item_repaired_args = 0
-        for _item_id, _arg_name, arg_value in _iter_call_values(result):
+        for _item_id, tool_name, arg_name, arg_value in _iter_call_values(result):
             if not isinstance(arg_value, str) or not arg_value:
                 continue
             total_calls += 1
+            tool_schema = tool_schema_map.get(tool_name) if tool_name else None
             try:
-                spec = _guess_spec_for_value(arg_value)
+                spec, used_heuristic = _spec_for_arg(
+                    tool_schema, arg_name, arg_value,
+                )
                 guard = validate_pre(arg_value, spec)
             except Exception:
                 continue
+
+            if used_heuristic:
+                heuristic_calls += 1
 
             codes = {v.code for v in guard.violations}
             if guard.violations:
@@ -281,6 +471,9 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
                 family = _classify_family(codes)
                 if family:
                     family_hits[family] += 1
+                    layer = _classify_layer(family)
+                    if layer:
+                        layer_hits[layer] += 1
             if "TRANSLITERATION_VIOLATION" in codes:
                 translit_hits += 1
             if "DIALECT_DRIFT" in codes:
@@ -292,15 +485,8 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
 
             if guard.repaired_surface:
                 repair_hits += 1
-                # Only count this repair toward item recoverability if
-                # the arg actually had a violation — an unsolicited repair
-                # on a clean arg doesn't offset a different arg's failure.
                 if guard.violations:
                     item_repaired_args += 1
-            # Score every concrete repair the scanner proposed, not just
-            # the chosen repaired_surface. That way advisory-only actions
-            # (suggest_dialect_rewrite) don't inflate the count but every
-            # arabizi/canonical proposal contributes a quality score.
             for repair in guard.repairs:
                 if repair.proposed is None:
                     continue
@@ -308,11 +494,10 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
                     score_repair(repair.original, repair.proposed, repair.action, spec)
                 )
 
-        # Fully recoverable only when EVERY violated arg was repaired.
         if item_violated_args > 0 and item_repaired_args == item_violated_args:
-            repaired_item_scores[result.item.id] = 1.0
+            repaired_item_scores_list.append(1.0)
         else:
-            repaired_item_scores[result.item.id] = original_total
+            repaired_item_scores_list.append(original_total)
 
     row.total_calls_scanned = total_calls
     row.violation_rate = violation_hits / max(1, total_calls)
@@ -325,15 +510,26 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
         for fam, hits in family_hits.items()
         if hits > 0
     }
+    row.layer_rates = {
+        lay: hits / max(1, total_calls)
+        for lay, hits in layer_hits.items()
+        if hits > 0
+    }
+    row.heuristic_scan_rate = heuristic_calls / max(1, total_calls)
     row.calls_with_concrete_repair = repair_hits
     row.repair_rate = repair_hits / max(1, total_calls)
     if quality_scores:
         row.repair_quality_mean = sum(quality_scores) / len(quality_scores)
         row.repair_quality_n = len(quality_scores)
-    if repaired_item_scores:
-        row.repaired_score = sum(repaired_item_scores.values()) / len(repaired_item_scores)
+    if repaired_item_scores_list:
+        row.repaired_score = sum(repaired_item_scores_list) / len(repaired_item_scores_list)
 
-    # Cost / latency — opt-in, only if caller populated them on EvalResult
+    # Bootstrap 95% CIs over the per-item score distributions. These
+    # capture WITHIN-RUN variance only — the subset of items happened
+    # to be scored. Model-run variance requires repeated runs.
+    row.baseline_ci_95 = _bootstrap_ci_95(baseline_item_scores)
+    row.repaired_ci_95 = _bootstrap_ci_95(repaired_item_scores_list)
+
     costs = [getattr(r, "cost_usd", None) for r in benchmark_result.results]
     costs = [c for c in costs if c is not None]
     if costs:
@@ -347,10 +543,26 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
     return row
 
 
-def build_matrix(benchmark_results: Iterable["BenchmarkResult"]) -> ResultMatrix:
-    """Fold N benchmark runs (typically one per provider-model pair) into
-    a single ResultMatrix."""
-    rows = [scan_with_mtg(br) for br in benchmark_results]
+def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
+    """Back-compat alias for `scan_with_schemas` with no schema map.
+
+    Kept for existing callers. New code should call `scan_with_schemas`
+    directly and pass a real tool-schema map to get schema-bound
+    replay. Without a map, the scanner falls back to the heuristic
+    path for every arg — the heuristic_scan_rate on the returned row
+    will be close to 1.0, and downstream consumers should treat the
+    result as diagnostic only.
+    """
+    return scan_with_schemas(benchmark_result, tool_schema_map=None)
+
+
+def build_matrix(
+    benchmark_results: Iterable["BenchmarkResult"],
+    tool_schema_map: Optional[dict[str, dict]] = None,
+) -> ResultMatrix:
+    """Fold N benchmark runs into a ResultMatrix. Schema-bound when
+    `tool_schema_map` is provided; heuristic-fallback when None."""
+    rows = [scan_with_schemas(br, tool_schema_map) for br in benchmark_results]
     return ResultMatrix(rows=rows)
 
 
@@ -358,53 +570,79 @@ def build_matrix(benchmark_results: Iterable["BenchmarkResult"]) -> ResultMatrix
 
 
 def render_markdown(matrix: ResultMatrix) -> str:
-    """Render the matrix as Markdown — baseline table + why-failed
-    breakdown + repair quality. Suitable for a blog post, arXiv
-    appendix, or README section."""
+    """Render the matrix as Markdown — main table + 3-layer taxonomy +
+    why-failed family breakdown + repair quality + run metadata.
+    Suitable for a blog post, arXiv appendix, or README section."""
+
+    # Main result table with bootstrap CIs on baseline/repaired.
     main_header = (
-        "| provider | model | baseline | repaired | Δ repair | "
-        "viol. % | translit % | drift % | bidi % | homoglyph % | "
+        "| provider | model | baseline (95% CI) | repaired (95% CI) | Δ repair | "
+        "viol. % | translit % | drift % | bidi % | homoglyph % | heur. scan % | "
         "items | calls | cost | p50 ms |\n"
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
     )
+
+    def _fmt_ci(score: float, ci: Optional[tuple[float, float]]) -> str:
+        if ci is None:
+            return f"{score:.3f}"
+        return f"{score:.3f} ({ci[0]:.3f}–{ci[1]:.3f})"
+
     main_rows = []
     for row in matrix.rows:
         delta = row.repaired_score - row.baseline_score
         cost = f"${row.total_cost_usd:.3f}" if row.total_cost_usd is not None else "—"
         latency = f"{row.median_latency_ms:.0f}" if row.median_latency_ms is not None else "—"
         main_rows.append(
-            "| {prov} | {model} | {base:.3f} | {rep:.3f} | {delta:+.3f} | "
-            "{v:.1%} | {t:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | "
+            "| {prov} | {model} | {base} | {rep} | {delta:+.3f} | "
+            "{v:.1%} | {t:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | {hs:.1%} | "
             "{items} | {calls} | {cost} | {lat} |".format(
                 prov=row.provider, model=row.model,
-                base=row.baseline_score, rep=row.repaired_score, delta=delta,
+                base=_fmt_ci(row.baseline_score, row.baseline_ci_95),
+                rep=_fmt_ci(row.repaired_score, row.repaired_ci_95),
+                delta=delta,
                 v=row.violation_rate, t=row.transliteration_rate,
                 d=row.dialect_drift_rate, b=row.bidi_violation_rate,
-                h=row.homoglyph_rate,
+                h=row.homoglyph_rate, hs=row.heuristic_scan_rate,
                 items=row.total_items, calls=row.total_calls_scanned,
                 cost=cost, lat=latency,
             )
         )
 
-    # Why-failed taxonomy — one row per model, one column per family.
+    # 3-layer taxonomy — surface / language / security.
+    layer_header = (
+        "| provider | model | surface | language | security |\n"
+        "|---|---|---:|---:|---:|"
+    )
+    layer_rows = []
+    for row in matrix.rows:
+        lr = row.layer_rates
+        layer_rows.append(
+            "| {p} | {m} | {s:.1%} | {l:.1%} | {sec:.1%} |".format(
+                p=row.provider, m=row.model,
+                s=lr.get("surface", 0.0),
+                l=lr.get("language", 0.0),
+                sec=lr.get("security", 0.0),
+            )
+        )
+
+    # Why-failed family breakdown (granular).
     fam_header = (
-        "| provider | model | script | dialect | bidi | homoglyph | "
-        "overflow | canonicalization |\n"
+        "| provider | model | script | canonicalization | dialect | overflow | "
+        "bidi | homoglyph |\n"
         "|---|---|---:|---:|---:|---:|---:|---:|"
     )
     fam_rows = []
     for row in matrix.rows:
         fr = row.family_rates
         fam_rows.append(
-            "| {p} | {m} | {s:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | {o:.1%} | {c:.1%} |".format(
+            "| {p} | {m} | {s:.1%} | {c:.1%} | {d:.1%} | {o:.1%} | {b:.1%} | {h:.1%} |".format(
                 p=row.provider, m=row.model,
-                s=fr.get("script", 0.0), d=fr.get("dialect", 0.0),
+                s=fr.get("script", 0.0), c=fr.get("canonicalization", 0.0),
+                d=fr.get("dialect", 0.0), o=fr.get("overflow", 0.0),
                 b=fr.get("bidi", 0.0), h=fr.get("homoglyph", 0.0),
-                o=fr.get("overflow", 0.0), c=fr.get("canonicalization", 0.0),
             )
         )
 
-    # Repair quality — only shown for rows that had concrete repairs.
     quality_header = (
         "| provider | model | repair quality | N repairs scored |\n"
         "|---|---|---:|---:|"
@@ -420,16 +658,49 @@ def render_markdown(matrix: ResultMatrix) -> str:
             )
         )
 
+    # Run provenance — one line per row, safe to eyeball.
+    meta_lines = []
+    for row in matrix.rows:
+        md = row.run_metadata or {}
+        if md:
+            meta_lines.append(
+                "- `{prov}` / `{model}` — run_id `{rid}` · scanned {ts} · "
+                "{n} items, {err} errors · scanner `{scan}`".format(
+                    prov=row.provider, model=row.model,
+                    rid=md.get("run_id", "?")[:8],
+                    ts=md.get("scanned_at", "?"),
+                    n=md.get("n_items", "?"),
+                    err=md.get("n_errors", "?"),
+                    scan=md.get("scanner_version", "?"),
+                )
+            )
+
     parts = [
         "## Result matrix",
+        "",
+        "`baseline` and `repaired` include bootstrap 95% CIs over the "
+        "items scored (within-run variance only — NOT model-run variance). "
+        "`heur. scan %` reports the fraction of args scored via the "
+        "heuristic fallback; high values mean the result is diagnostic, "
+        "not schema-grounded.",
         "",
         main_header,
         *main_rows,
         "",
-        "## Why failed — taxonomy breakdown",
+        "## 3-layer taxonomy",
         "",
-        "Each failing argument is classified into exactly one family "
-        "(security > content > linguistic). Row sums are ≤ `viol. %` above.",
+        "Each failing argument is classified into exactly one layer. "
+        "**Surface** = schema-shape failures (script mismatch). "
+        "**Language** = register, morphology, canonicalization, overflow. "
+        "**Security** = Unicode-layer attacks (BiDi, homoglyph, invisibles). "
+        "Row sums are ≤ `viol. %` in the matrix above.",
+        "",
+        layer_header,
+        *layer_rows,
+        "",
+        "## Why failed — family breakdown",
+        "",
+        "Granular view of the same classification (worst family wins per arg).",
         "",
         fam_header,
         *fam_rows,
@@ -444,6 +715,13 @@ def render_markdown(matrix: ResultMatrix) -> str:
             "",
             quality_header,
             *quality_rows,
+        ])
+    if meta_lines:
+        parts.extend([
+            "",
+            "## Run provenance",
+            "",
+            *meta_lines,
         ])
     return "\n".join(parts)
 
@@ -531,4 +809,5 @@ __all__ = [
     "render_csv",
     "render_markdown",
     "scan_with_mtg",
+    "scan_with_schemas",
 ]

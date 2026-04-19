@@ -322,3 +322,268 @@ def test_repaired_score_ignores_unsolicited_repairs_on_clean_args():
     # No violations here — both args are legitimate Arabic. Just assert
     # no spurious upgrade happens.
     assert row.repaired_score == pytest.approx(0.5)
+
+
+# ---------- schema-bound replay ----------
+
+
+def test_scan_with_schemas_uses_x_mtg_when_available():
+    """Schema-bound replay — an x-mtg block on the tool schema must
+    produce a strict spec (not the heuristic). A Gulf-declared message
+    arg receiving MSA content fires DIALECT_DRIFT under schema-bound
+    replay; the heuristic alone wouldn't catch dialect mismatch."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    tool_schema_map = {
+        "send_message": {
+            "name": "send_message",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "x-mtg": {
+                            "slot_type": "free_text",
+                            "script": "ar",
+                            "dialect_expected": "gulf",
+                            "dialect_enforcement": "preserve",
+                            "mode": "advisory",
+                        },
+                    },
+                },
+            },
+        },
+    }
+    # Egyptian-dialect content in a Gulf-declared slot — classifier
+    # emits high-confidence 'egy', so DIALECT_DRIFT fires under the
+    # schema-bound spec. Heuristic alone can't catch this because it
+    # would pick dialect_expected=any on bare Arabic content.
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result(
+            "drift",
+            [{"function": "send_message", "arguments": {
+                "message": "عايز أبعت رسالة لمحمد",  # Egyptian, not Gulf
+            }}],
+        )],
+    )
+    row = scan_with_schemas(br, tool_schema_map)
+    assert row.dialect_drift_rate > 0
+    assert row.heuristic_scan_rate == 0.0  # every arg had schema-bound spec
+
+
+def test_scan_with_schemas_falls_back_to_heuristic_when_no_x_mtg():
+    """Args without x-mtg in the schema still get scanned, but marked
+    heuristic_scan=true so downstream can filter."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    tool_schema_map = {
+        "send_message": {
+            "name": "send_message",
+            "parameters": {"type": "object", "properties": {
+                # No x-mtg on this property — heuristic must fire
+                "message": {"type": "string"},
+            }},
+        },
+    }
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "send_message",
+                                "arguments": {"message": "أبي أحجز"}}])],
+    )
+    row = scan_with_schemas(br, tool_schema_map)
+    assert row.heuristic_scan_rate == 1.0  # every arg fell to heuristic
+
+
+def test_scan_with_mtg_is_heuristic_fallback_alias():
+    """scan_with_mtg keeps backward compat — no schema map = pure
+    heuristic. heuristic_scan_rate should be 1.0 when no schemas
+    declare x-mtg (which is the case for the default FUNCTIONS)."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "search_flights",
+                                "arguments": {"from_city": "الرياض",
+                                              "to_city": "جدة"}}])],
+    )
+    row = scan_with_mtg(br)
+    # The default FUNCTIONS schema map doesn't carry x-mtg — all heuristic.
+    assert row.heuristic_scan_rate == 1.0
+
+
+def test_scan_with_schemas_malformed_xmtg_falls_back_cleanly():
+    """A schema with a broken x-mtg block (bad enum) should not crash
+    the scanner — it falls back to heuristic and flags the arg."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    tool_schema_map = {
+        "send_message": {
+            "name": "send_message",
+            "parameters": {"type": "object", "properties": {
+                "message": {
+                    "type": "string",
+                    "x-mtg": {"script": "klingon"},  # invalid enum
+                },
+            }},
+        },
+    }
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "send_message",
+                                "arguments": {"message": "أبي"}}])],
+    )
+    row = scan_with_schemas(br, tool_schema_map)
+    # Crash would fail here; bad spec → heuristic fallback.
+    assert row.heuristic_scan_rate == 1.0
+
+
+# ---------- 3-layer taxonomy ----------
+
+
+def test_layer_rates_classify_script_as_surface():
+    """SCRIPT_VIOLATION → surface (schema shape failure)."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    tool_schema_map = {
+        "send_message": {
+            "name": "send_message",
+            "parameters": {"type": "object", "properties": {
+                "message": {"type": "string",
+                            "x-mtg": {"script": "ar", "mode": "advisory"}},
+            }},
+        },
+    }
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "send_message",
+                                "arguments": {"message": "hello"}}])],
+    )
+    row = scan_with_schemas(br, tool_schema_map)
+    assert row.layer_rates.get("surface", 0) > 0
+    assert row.layer_rates.get("language", 0) == 0
+    assert row.layer_rates.get("security", 0) == 0
+
+
+def test_layer_rates_classify_bidi_as_security():
+    """BIDI_CONTROL_SMUGGLING → security."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "x",
+                                "arguments": {"msg": "أبي\u202eأحجز"}}])],
+    )
+    row = scan_with_mtg(br)
+    assert row.layer_rates.get("security", 0) > 0
+
+
+def test_layer_rates_classify_dialect_as_language():
+    """DIALECT_DRIFT → language."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    tool_schema_map = {
+        "send_message": {
+            "name": "send_message",
+            "parameters": {"type": "object", "properties": {
+                "message": {"type": "string", "x-mtg": {
+                    "script": "ar", "dialect_expected": "gulf",
+                    "dialect_enforcement": "preserve", "mode": "advisory",
+                }},
+            }},
+        },
+    }
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "send_message",
+                                "arguments": {"message": "عايز أبعت رسالة دلوقتي"}}])],
+    )
+    row = scan_with_schemas(br, tool_schema_map)
+    assert row.layer_rates.get("language", 0) > 0
+    assert row.layer_rates.get("surface", 0) == 0
+
+
+# ---------- bootstrap CIs + run metadata ----------
+
+
+def test_bootstrap_ci_present_when_multiple_items():
+    """CIs fire when we have ≥2 items to bootstrap over."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[
+            _result("a", [{"function": "x", "arguments": {"q": "أبي"}}], score_total=1.0),
+            _result("b", [{"function": "x", "arguments": {"q": "احجز"}}], score_total=0.5),
+            _result("c", [{"function": "x", "arguments": {"q": "مرحبا"}}], score_total=0.0),
+        ],
+    )
+    row = scan_with_mtg(br)
+    assert row.baseline_ci_95 is not None
+    lo, hi = row.baseline_ci_95
+    # CI must bracket the point estimate
+    assert lo <= row.baseline_score <= hi
+
+
+def test_bootstrap_ci_absent_for_single_item():
+    """Can't bootstrap a single observation — CI stays None."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    assert row.baseline_ci_95 is None
+
+
+def test_bootstrap_ci_is_deterministic():
+    """Same seed → same CI. Important for reproducible result tables."""
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[
+            _result("a", [{"function": "x", "arguments": {"q": "أبي"}}], score_total=1.0),
+            _result("b", [{"function": "x", "arguments": {"q": "احجز"}}], score_total=0.5),
+        ],
+    )
+    row1 = scan_with_mtg(br)
+    row2 = scan_with_mtg(br)
+    assert row1.baseline_ci_95 == row2.baseline_ci_95
+
+
+def test_run_metadata_stamped_on_every_row():
+    """Every scanned MatrixRow gets provenance stamped."""
+    br = BenchmarkResult(
+        provider="p", model="m-v1",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    md = row.run_metadata
+    assert "run_id" in md and len(md["run_id"]) >= 16
+    assert "scanned_at" in md
+    assert md["provider"] == "p"
+    assert md["model"] == "m-v1"
+    assert md["n_items"] == 1
+    assert md["scanner_version"].startswith("mtg-matrix/")
+
+
+def test_to_dict_surfaces_ci_and_heuristic_rate():
+    br = BenchmarkResult(
+        provider="t", model="m",
+        results=[
+            _result("a", [{"function": "x", "arguments": {"q": "أبي"}}], score_total=1.0),
+            _result("b", [{"function": "x", "arguments": {"q": "احجز"}}], score_total=0.0),
+        ],
+    )
+    row = scan_with_mtg(br)
+    d = row.to_dict()
+    assert "baseline_ci_95" in d and d["baseline_ci_95"] is not None
+    assert "repaired_ci_95" in d
+    assert "heuristic_scan_rate" in d
+    assert "layer_rates" in d
+    assert "run_metadata" in d and d["run_metadata"]["run_id"]
+
+
+def test_render_markdown_contains_three_layers_and_heuristic_rate():
+    br = BenchmarkResult(
+        provider="a", model="m1",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}], score_total=1.0)],
+    )
+    matrix = build_matrix([br])
+    md = render_markdown(matrix)
+    assert "3-layer taxonomy" in md
+    assert "surface" in md and "language" in md and "security" in md
+    assert "heur. scan" in md
+    assert "Run provenance" in md
