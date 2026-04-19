@@ -68,7 +68,7 @@ Partial Arabic content passes (e.g. `الرياض 2025` actual matches `الري
 
 ## Dialect-preservation rules
 
-`dialect_handling` items carry a declared `dialect` field in their metadata. The grader does not enforce dialect on actual output (models returning MSA for a Gulf prompt are not punished at the preservation axis). Instead, `dialect_understanding` is binary and equal to `function_selection` — if the model picked the right tool despite the dialectal framing, it understood the dialect well enough to act. Finer-grained dialect scoring is reserved for MTG (see `/Users/mousaabumazin/Projects/mtg`).
+`dialect_handling` items carry a declared `dialect` field in their metadata. The grader does not enforce dialect on actual output (models returning MSA for a Gulf prompt are not punished at the preservation axis). Instead, `dialect_understanding` is binary and equal to `function_selection` — if the model picked the right tool despite the dialectal framing, it understood the dialect well enough to act. Finer-grained dialect scoring is reserved for [MTG](https://github.com/Moshe-ship/mtg).
 
 ## Per-category score composition
 

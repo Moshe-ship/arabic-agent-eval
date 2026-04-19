@@ -12,7 +12,7 @@ MADAR (Bouamor et al. 2018) and related resources (ArabicDialectNLI, ADI corpus,
 
 ## vs Habibi corpus and Arabic morphological resources
 
-Habibi (Habibullah et al.), CAMeL Tools morphological analyzers, MADAMIRA, and Farasa all operate at the **corpus / word** level: tokenization, root extraction, POS tagging, lemmatization. Arabic Agent Eval operates at the **tool-argument level** — a layer above. Morphological resources are a natural dependency, not a competitor. The MTG project (`/Users/mousaabumazin/Projects/mtg`) bridges the two by adding morphological type guards over tool-call parameters.
+Habibi (Habibullah et al.), CAMeL Tools morphological analyzers, MADAMIRA, and Farasa all operate at the **corpus / word** level: tokenization, root extraction, POS tagging, lemmatization. Arabic Agent Eval operates at the **tool-argument level** — a layer above. Morphological resources are a natural dependency, not a competitor. The [MTG project](https://github.com/Moshe-ship/mtg) bridges the two by adding morphological type guards over tool-call parameters.
 
 ## vs Arabic LLM benchmarks (OALL, HELM-Arabic, ABBL, Silma)
 
