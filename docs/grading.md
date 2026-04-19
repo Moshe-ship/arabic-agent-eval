@@ -31,6 +31,16 @@ Numeric values are stringified before comparison. Missing keys contribute 0. Ext
 
 The per-call `argument_accuracy` is `sum(key_scores) / len(expected_arguments)`.
 
+## Multi-call scoring
+
+Items can declare multiple `expected_calls`. The grader scores each expected call independently and averages across `max(len(expected_calls), len(actual_calls))`. Concretely:
+
+- A model that emits fewer calls than expected gets 0 for every missing slot, diluting all three axes toward 0.
+- A model that emits **extra** calls beyond the expected count contributes 0 to the numerator for each extra but increases the denominator by 1. This penalizes models that append unrelated or destructive calls. A perfect 3-call sequence followed by one extra delete scores 0.75 on all three axes, not 1.0.
+- Missing argument keys contribute 0; extra keys in a call are ignored (unchanged).
+
+`dialect_understanding` and `error_handling` (category-specific axes) follow `function_selection`.
+
 ## Arabic normalization rules
 
 The normalizer (`arabic_agent_eval.scoring.normalize_arabic`) is idempotent and applies to any string containing Arabic script. Non-Arabic strings pass through lowercased.

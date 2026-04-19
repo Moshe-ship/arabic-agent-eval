@@ -164,11 +164,14 @@ class Evaluator:
     def _score_item(self, item: EvalItem, actual_calls: list[dict]) -> Score:
         """Score an item based on expected vs actual calls.
 
-        Grades EVERY expected call structurally, not just the first:
-        function_selection is 1.0 only when every expected call's function
-        matches in order; argument_accuracy and arabic_preservation are
-        per-call averages. Extra actual calls beyond the expected count
-        are ignored. Missing actual calls score 0 on all axes.
+        Grades EVERY expected call structurally, not just the first.
+        Denominator is `max(len(expected), len(actual))` so that emitting
+        extra (unexpected) tool calls dilutes all three axes. A model that
+        issues the correct sequence plus an extra destructive call cannot
+        score 1.0 on this item.
+
+        Missing actual calls score 0 on all axes. Extra actual calls
+        contribute 0 to the numerator and 1 each to the denominator.
         """
         score = Score(item_id=item.id, category=item.category)
 
@@ -180,11 +183,12 @@ class Evaluator:
         func_sum = 0.0
         arg_sum = 0.0
         arabic_sum = 0.0
-        n = len(item.expected_calls)
+        n_expected = len(item.expected_calls)
+        n_actual = len(actual_calls)
+        denom = max(n_expected, n_actual)
 
         for i, expected in enumerate(item.expected_calls):
-            if i >= len(actual_calls):
-                # Missing call — zero credit on all axes for this slot
+            if i >= n_actual:
                 continue
             actual = actual_calls[i] or {}
             actual_fn = actual.get("function", actual.get("name"))
@@ -205,9 +209,9 @@ class Evaluator:
             arg_sum += arg_s
             arabic_sum += arabic_s
 
-        score.function_selection = func_sum / n
-        score.argument_accuracy = arg_sum / n
-        score.arabic_preservation = arabic_sum / n
+        score.function_selection = func_sum / denom
+        score.argument_accuracy = arg_sum / denom
+        score.arabic_preservation = arabic_sum / denom
 
         if item.category == "dialect_handling":
             score.dialect_understanding = score.function_selection

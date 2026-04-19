@@ -144,12 +144,17 @@ def score_function_call(
     """Score a single function call.
 
     Returns (function_selection, argument_accuracy, arabic_preservation).
+    The literal wildcard `"*"` in `expected_function` matches any non-null
+    actual function (documented in docs/grading.md, used for multi-step items
+    with runtime-dependent intermediates).
     """
     if actual_function is None:
         return 0.0, 0.0, 0.0
 
-    # Function selection
-    func_score = 1.0 if actual_function == expected_function else 0.0
+    if expected_function == "*":
+        func_score = 1.0
+    else:
+        func_score = 1.0 if actual_function == expected_function else 0.0
 
     if actual_args is None:
         return func_score, 0.0, 0.0

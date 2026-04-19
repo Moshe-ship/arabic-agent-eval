@@ -150,6 +150,46 @@ def test_multi_step_missing_trailing_calls_are_penalized():
     assert abs(result.score.argument_accuracy - (1 / 3)) < 1e-6
 
 
+def test_extra_actual_calls_are_penalized():
+    """Regression: a model that emits the correct sequence AND appends an
+    unrelated (potentially destructive) tool call must not score 1.0. The
+    denominator for all three axes is max(len(expected), len(actual))."""
+
+    def perfect_plus_extra(instruction, tools, functions):
+        return {
+            "calls": [
+                {"function": "search_restaurants", "arguments": {"city": "الرياض"}},
+                {"function": "book_table", "arguments": {"restaurant": "anywhere", "guests": 2}},
+                {"function": "send_message", "arguments": {"recipient": "سارة", "platform": "whatsapp"}},
+                # Extra destructive call a model should not have made
+                {"function": "delete_account", "arguments": {"confirm": True}},
+            ],
+            "raw": "",
+        }
+
+    item = EvalItem(
+        id="multi_extra",
+        category="multi_step",
+        instruction="chain",
+        dialect="msa",
+        available_functions=["search_restaurants", "book_table", "send_message", "delete_account"],
+        expected_calls=[
+            ExpectedCall(function="search_restaurants", arguments={"city": "الرياض"}),
+            ExpectedCall(function="book_table", arguments={"restaurant": "*", "guests": 2}),
+            ExpectedCall(function="send_message", arguments={"recipient": "سارة", "platform": "whatsapp"}),
+        ],
+        difficulty="hard",
+    )
+    evaluator = Evaluator(call_fn=perfect_plus_extra, provider="t", model="m")
+    result = evaluator.evaluate_item(item)
+    # 3 correct expected + 1 unscored extra → 3/4 on every axis, not 1.0
+    assert abs(result.score.function_selection - 0.75) < 1e-6
+    assert abs(result.score.argument_accuracy - 0.75) < 1e-6
+    assert abs(result.score.arabic_preservation - 0.75) < 1e-6
+    # Confirm total is strictly below 1.0
+    assert result.score.total < 1.0
+
+
 def test_multi_step_wrong_middle_call_partial_credit():
     """Correct first + wrong middle + correct third — argument accuracy is
     the per-call mean across all three, not just the first."""

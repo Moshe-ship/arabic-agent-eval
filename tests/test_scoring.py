@@ -178,3 +178,32 @@ def test_score_function_call_arabic_normalization_partial_credit():
     assert func == 1.0
     assert arg == 0.9
     assert arabic == 1.0
+
+
+def test_wildcard_function_matches_any_actual():
+    """Regression: docs/grading.md promises expected_function='*' accepts any name.
+
+    Used for multi-step items with runtime-dependent intermediates.
+    """
+    func, arg, arabic = score_function_call(
+        "*",
+        "search_hotels",
+        {},
+        {},
+    )
+    assert func == 1.0
+
+    func, arg, arabic = score_function_call(
+        "*",
+        "some_other_tool",
+        {"q": "الرياض"},
+        {"q": "الرياض"},
+    )
+    assert func == 1.0
+    assert arg == 1.0
+
+
+def test_wildcard_function_still_requires_non_null_actual():
+    """'*' is permissive on the name but null actual still fails."""
+    func, arg, arabic = score_function_call("*", None, {}, None)
+    assert func == 0.0
