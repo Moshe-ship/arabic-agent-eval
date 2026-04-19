@@ -43,6 +43,42 @@ except ImportError:  # pragma: no cover
     _MTG_AVAILABLE = False
 
 
+# Violation code → failure family. Each arg that emits a violation
+# increments exactly one family count (worst-category wins). Families
+# are ordered by severity for the tiebreak.
+_CODE_TO_FAMILY: dict[str, str] = {
+    # security (highest priority)
+    "BIDI_CONTROL_SMUGGLING": "bidi",
+    "INVISIBLE_CONTENT": "bidi",
+    "SCRIPT_HOMOGLYPH": "homoglyph",
+    # content correctness
+    "CANONICALIZATION_REQUIRED": "canonicalization",
+    "SURFACE_CORRUPTION_POST_CALL": "canonicalization",
+    "SCRIPT_VIOLATION": "script",
+    "TRANSLITERATION_VIOLATION": "script",
+    # linguistic
+    "DIALECT_DRIFT": "dialect",
+    "DIALECT_FLATTEN": "dialect",
+    "FREE_TEXT_OVERFLOW": "overflow",
+    # morph — not promoted to a top-level family (they're advisory)
+    "MORPH_CANONICALIZATION_FAILURE": "canonicalization",
+    "MORPH_AMBIGUITY": "canonicalization",
+    "ROOT_DRIFT": "canonicalization",
+    "BACKEND_DISAGREEMENT": "canonicalization",
+}
+
+_FAMILY_ORDER = ("bidi", "homoglyph", "script", "dialect", "canonicalization", "overflow")
+
+
+def _classify_family(codes: set[str]) -> Optional[str]:
+    """Pick one failure family for an arg given the violation codes
+    it emitted. Worst family wins (security > content > linguistic)."""
+    for fam in _FAMILY_ORDER:
+        if any(_CODE_TO_FAMILY.get(c) == fam for c in codes):
+            return fam
+    return None
+
+
 @dataclass
 class MatrixRow:
     """One row of the result table — typically a (provider, model) pair."""
@@ -57,10 +93,17 @@ class MatrixRow:
     dialect_drift_rate: float = 0.0
     bidi_violation_rate: float = 0.0
     homoglyph_rate: float = 0.0
+    # Why-failed taxonomy — every failing arg is assigned one family
+    # (worst wins). Sum of family rates ≤ violation_rate.
+    family_rates: dict[str, float] = field(default_factory=dict)
     # Repair path
     calls_with_concrete_repair: int = 0
     repair_rate: float = 0.0
     repaired_score: float = 0.0  # baseline_score if repaired args were used
+    # Repair quality — mean score across every concrete repair the
+    # scanner saw. 1.0 = clean repair, 0.5 = needs review, 0.0 = broken.
+    repair_quality_mean: Optional[float] = None
+    repair_quality_n: int = 0
     # Cost / latency
     total_cost_usd: Optional[float] = None
     median_latency_ms: Optional[float] = None
@@ -77,7 +120,13 @@ class MatrixRow:
             "dialect_drift_rate": round(self.dialect_drift_rate, 4),
             "bidi_violation_rate": round(self.bidi_violation_rate, 4),
             "homoglyph_rate": round(self.homoglyph_rate, 4),
+            "family_rates": {k: round(v, 4) for k, v in self.family_rates.items()},
             "repair_rate": round(self.repair_rate, 4),
+            "repair_quality_mean": (
+                round(self.repair_quality_mean, 4)
+                if self.repair_quality_mean is not None else None
+            ),
+            "repair_quality_n": self.repair_quality_n,
             "total_items": self.total_items,
             "total_calls_scanned": self.total_calls_scanned,
             "calls_with_concrete_repair": self.calls_with_concrete_repair,
@@ -155,10 +204,16 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
     homoglyph_hits = 0
     total_calls = 0
     repair_hits = 0
+    family_hits: dict[str, int] = {fam: 0 for fam in _FAMILY_ORDER}
+    # Repair quality — compute score_repair() on every concrete proposal
+    # and average. None stays None if no concrete repairs were seen.
+    quality_scores: list[float] = []
     # For repaired_score: per-item, if EVERY Arabic arg got a concrete
     # repair, treat the item as "could have been fixed"; contributes
     # baseline-or-1.0 to repaired_score depending on the original score.
     repaired_item_scores: dict[str, float] = {}
+
+    from mtg.repair import score_repair  # deferred for the optional-mtg case
 
     for result in benchmark_result.results:
         if result.error:
@@ -176,10 +231,13 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
             except Exception:
                 continue
 
+            codes = {v.code for v in guard.violations}
             if guard.violations:
                 violation_hits += 1
                 item_had_violations = True
-            codes = {v.code for v in guard.violations}
+                family = _classify_family(codes)
+                if family:
+                    family_hits[family] += 1
             if "TRANSLITERATION_VIOLATION" in codes:
                 translit_hits += 1
             if "DIALECT_DRIFT" in codes:
@@ -192,11 +250,17 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
             if guard.repaired_surface:
                 repair_hits += 1
                 item_could_repair = True
+            # Score every concrete repair the scanner proposed, not just
+            # the chosen repaired_surface. That way advisory-only actions
+            # (suggest_dialect_rewrite) don't inflate the count but every
+            # arabizi/canonical proposal contributes a quality score.
+            for repair in guard.repairs:
+                if repair.proposed is None:
+                    continue
+                quality_scores.append(
+                    score_repair(repair.original, repair.proposed, repair.action, spec)
+                )
 
-        # Repaired-score bookkeeping: if the item had violations AND got a
-        # concrete repair proposal for at least one arg, we credit the
-        # caller with 1.0 on a weighted basis (they can replay). This is
-        # deliberately optimistic; use it as an upper bound.
         if item_had_violations and item_could_repair:
             repaired_item_scores[result.item.id] = 1.0
         else:
@@ -208,8 +272,16 @@ def scan_with_mtg(benchmark_result: "BenchmarkResult") -> MatrixRow:
     row.dialect_drift_rate = dialect_hits / max(1, total_calls)
     row.bidi_violation_rate = bidi_hits / max(1, total_calls)
     row.homoglyph_rate = homoglyph_hits / max(1, total_calls)
+    row.family_rates = {
+        fam: hits / max(1, total_calls)
+        for fam, hits in family_hits.items()
+        if hits > 0
+    }
     row.calls_with_concrete_repair = repair_hits
     row.repair_rate = repair_hits / max(1, total_calls)
+    if quality_scores:
+        row.repair_quality_mean = sum(quality_scores) / len(quality_scores)
+        row.repair_quality_n = len(quality_scores)
     if repaired_item_scores:
         row.repaired_score = sum(repaired_item_scores.values()) / len(repaired_item_scores)
 
@@ -238,20 +310,21 @@ def build_matrix(benchmark_results: Iterable["BenchmarkResult"]) -> ResultMatrix
 
 
 def render_markdown(matrix: ResultMatrix) -> str:
-    """Render the matrix as a single Markdown table suitable for a blog
-    post, arXiv appendix, or README section."""
-    header = (
+    """Render the matrix as Markdown — baseline table + why-failed
+    breakdown + repair quality. Suitable for a blog post, arXiv
+    appendix, or README section."""
+    main_header = (
         "| provider | model | baseline | repaired | Δ repair | "
         "viol. % | translit % | drift % | bidi % | homoglyph % | "
         "items | calls | cost | p50 ms |\n"
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"
     )
-    lines = [header]
+    main_rows = []
     for row in matrix.rows:
         delta = row.repaired_score - row.baseline_score
         cost = f"${row.total_cost_usd:.3f}" if row.total_cost_usd is not None else "—"
         latency = f"{row.median_latency_ms:.0f}" if row.median_latency_ms is not None else "—"
-        lines.append(
+        main_rows.append(
             "| {prov} | {model} | {base:.3f} | {rep:.3f} | {delta:+.3f} | "
             "{v:.1%} | {t:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | "
             "{items} | {calls} | {cost} | {lat} |".format(
@@ -264,7 +337,67 @@ def render_markdown(matrix: ResultMatrix) -> str:
                 cost=cost, lat=latency,
             )
         )
-    return "\n".join(lines)
+
+    # Why-failed taxonomy — one row per model, one column per family.
+    fam_header = (
+        "| provider | model | script | dialect | bidi | homoglyph | "
+        "overflow | canonicalization |\n"
+        "|---|---|---:|---:|---:|---:|---:|---:|"
+    )
+    fam_rows = []
+    for row in matrix.rows:
+        fr = row.family_rates
+        fam_rows.append(
+            "| {p} | {m} | {s:.1%} | {d:.1%} | {b:.1%} | {h:.1%} | {o:.1%} | {c:.1%} |".format(
+                p=row.provider, m=row.model,
+                s=fr.get("script", 0.0), d=fr.get("dialect", 0.0),
+                b=fr.get("bidi", 0.0), h=fr.get("homoglyph", 0.0),
+                o=fr.get("overflow", 0.0), c=fr.get("canonicalization", 0.0),
+            )
+        )
+
+    # Repair quality — only shown for rows that had concrete repairs.
+    quality_header = (
+        "| provider | model | repair quality | N repairs scored |\n"
+        "|---|---|---:|---:|"
+    )
+    quality_rows = []
+    for row in matrix.rows:
+        if row.repair_quality_mean is None:
+            continue
+        quality_rows.append(
+            "| {p} | {m} | {q:.2f} | {n} |".format(
+                p=row.provider, m=row.model,
+                q=row.repair_quality_mean, n=row.repair_quality_n,
+            )
+        )
+
+    parts = [
+        "## Result matrix",
+        "",
+        main_header,
+        *main_rows,
+        "",
+        "## Why failed — taxonomy breakdown",
+        "",
+        "Each failing argument is classified into exactly one family "
+        "(security > content > linguistic). Row sums are ≤ `viol. %` above.",
+        "",
+        fam_header,
+        *fam_rows,
+    ]
+    if quality_rows:
+        parts.extend([
+            "",
+            "## Repair quality",
+            "",
+            "Score in [0.0, 1.0]. 1.0 = clean repair, 0.5 = needs review, "
+            "0.0 = broken invariant. See `mtg.repair.score_repair`.",
+            "",
+            quality_header,
+            *quality_rows,
+        ])
+    return "\n".join(parts)
 
 
 def render_csv(matrix: ResultMatrix) -> str:
