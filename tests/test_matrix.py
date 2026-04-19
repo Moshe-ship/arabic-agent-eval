@@ -395,10 +395,10 @@ def test_scan_with_schemas_falls_back_to_heuristic_when_no_x_mtg():
     assert row.heuristic_scan_rate == 1.0  # every arg fell to heuristic
 
 
-def test_scan_with_mtg_is_heuristic_fallback_alias():
-    """scan_with_mtg keeps backward compat — no schema map = pure
-    heuristic. heuristic_scan_rate should be 1.0 when no schemas
-    declare x-mtg (which is the case for the default FUNCTIONS)."""
+def test_scan_with_mtg_uses_annotated_default_functions():
+    """As of the x-mtg expansion, the default FUNCTIONS registry carries
+    x-mtg on every parameter. scan_with_mtg with no caller-supplied map
+    now produces schema-grounded rows, not heuristic ones."""
     br = BenchmarkResult(
         provider="t", model="m",
         results=[_result("a", [{"function": "search_flights",
@@ -406,8 +406,57 @@ def test_scan_with_mtg_is_heuristic_fallback_alias():
                                               "to_city": "جدة"}}])],
     )
     row = scan_with_mtg(br)
-    # The default FUNCTIONS schema map doesn't carry x-mtg — all heuristic.
-    assert row.heuristic_scan_rate == 1.0
+    # Annotated FUNCTIONS → schema-bound replay fires for every arg.
+    assert row.heuristic_scan_rate == 0.0
+    assert row.schema_bound_rate == 1.0
+    assert "search_flights" in row.schema_covered_tools
+
+
+def test_every_function_declares_x_mtg_on_every_param():
+    """Regression: x-mtg coverage across the FUNCTIONS registry must
+    stay at 100%. A new function added without x-mtg annotations
+    would silently drop schema_bound_rate on default-map runs."""
+    from arabic_agent_eval.functions import FUNCTIONS
+
+    missing: list[tuple[str, str]] = []
+    for fn in FUNCTIONS:
+        for pname, prop in fn["parameters"]["properties"].items():
+            if "x-mtg" not in prop:
+                missing.append((fn["name"], pname))
+    assert missing == [], f"parameters without x-mtg: {missing}"
+
+
+def test_default_map_run_hits_schema_bound_target():
+    """Hard target from the reviewer: schema_bound_rate ≥ 0.9 on
+    realistic default-map runs. If this drops below threshold, a new
+    tool with unannotated slots got added and future publications will
+    be marked diagnostic."""
+    from arabic_agent_eval.dataset import Dataset
+
+    dataset = Dataset()
+    results = []
+    for item in list(dataset)[:20]:
+        actual = [
+            {"function": c.function, "arguments": c.arguments}
+            for c in item.expected_calls
+        ]
+        results.append(
+            EvalResult(
+                item=item,
+                score=Score(
+                    item_id=item.id, category=item.category,
+                    function_selection=1.0, argument_accuracy=1.0,
+                    arabic_preservation=1.0,
+                ),
+                actual_calls=actual,
+            )
+        )
+    br = BenchmarkResult(provider="synth", model="target", results=results)
+    row = scan_with_mtg(br)
+    assert row.schema_bound_rate >= 0.9, (
+        f"schema_bound_rate={row.schema_bound_rate:.2%} below 0.9 target — "
+        "a new tool is missing x-mtg annotations"
+    )
 
 
 def test_scan_with_schemas_malformed_xmtg_falls_back_cleanly():
@@ -557,6 +606,70 @@ def test_run_metadata_stamped_on_every_row():
     assert md["model"] == "m-v1"
     assert md["n_items"] == 1
     assert md["scanner_version"].startswith("mtg-matrix/")
+
+
+def test_run_metadata_carries_code_shas():
+    """Provenance: every scan records git HEAD SHA for the MTG-stack
+    packages present in the env. Answers 'what code produced this?'"""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    shas = row.run_metadata.get("code_shas") or {}
+    # arabic_agent_eval is this repo — SHA must be present
+    assert shas.get("arabic_agent_eval"), "aae SHA missing from provenance"
+    assert len(shas["arabic_agent_eval"]) == 40
+    # mtg + toolproof may be None in minimal installs — just assert
+    # the key is present so downstream knows whether it was captured
+    assert "mtg" in shas
+    assert "toolproof" in shas
+
+
+def test_run_metadata_carries_schema_map_fingerprint():
+    """Different schema maps produce different fingerprints."""
+    from arabic_agent_eval.matrix import scan_with_schemas
+
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "send_message",
+                                "arguments": {"q": "أبي"}}])],
+    )
+    map_a = {
+        "send_message": {"name": "send_message", "parameters": {"type": "object",
+            "properties": {"q": {"type": "string",
+                                  "x-mtg": {"script": "ar", "mode": "advisory"}}}}},
+    }
+    map_b = {
+        "send_message": {"name": "send_message", "parameters": {"type": "object",
+            "properties": {"q": {"type": "string",
+                                  "x-mtg": {"script": "latn", "mode": "advisory"}}}}},
+    }
+    fp_a = scan_with_schemas(br, map_a).run_metadata["schema_map_fingerprint"]
+    fp_b = scan_with_schemas(br, map_b).run_metadata["schema_map_fingerprint"]
+    # Same map twice → same fingerprint
+    fp_a2 = scan_with_schemas(br, map_a).run_metadata["schema_map_fingerprint"]
+    assert fp_a == fp_a2
+    # Different x-mtg content → different fingerprint
+    assert fp_a != fp_b
+    # Fingerprint is a sha256 hex string
+    assert len(fp_a) == 64 and all(c in "0123456789abcdef" for c in fp_a)
+
+
+def test_schema_map_fingerprint_ignores_editorial_changes():
+    """Changing descriptions / names must not change the fingerprint —
+    only x-mtg content matters."""
+    from arabic_agent_eval.matrix import _fingerprint_schema_map
+
+    base = {"t": {"name": "t", "description": "original",
+        "parameters": {"type": "object", "properties": {
+            "a": {"type": "string", "description": "one",
+                   "x-mtg": {"script": "ar", "mode": "advisory"}}}}}}
+    edited = {"t": {"name": "t", "description": "updated copy",
+        "parameters": {"type": "object", "properties": {
+            "a": {"type": "string", "description": "something else",
+                   "x-mtg": {"script": "ar", "mode": "advisory"}}}}}}
+    assert _fingerprint_schema_map(base) == _fingerprint_schema_map(edited)
 
 
 def test_to_dict_surfaces_ci_and_heuristic_rate():

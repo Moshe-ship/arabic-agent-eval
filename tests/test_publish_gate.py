@@ -76,14 +76,29 @@ def _clean_bundle(tmp_path: Path) -> Path:
     return write_bundle(matrix, tmp_path / "bundle", run_json_files=[run_src])
 
 
+_BARE_SCHEMA_MAP = {
+    # Same tool name as _item()'s actual_calls use, but NO x-mtg blocks —
+    # forces 100% heuristic fallback regardless of whether the default
+    # FUNCTIONS registry carries x-mtg elsewhere.
+    "send_message": {
+        "name": "send_message",
+        "parameters": {"type": "object", "properties": {
+            "message": {"type": "string"},
+        }},
+    },
+}
+
+
 def _heuristic_bundle(tmp_path: Path) -> Path:
     """Pure-heuristic bundle: every row diagnostic. Useful for testing
-    gate-reject paths on schema-coverage grounds."""
+    gate-reject paths on schema-coverage grounds. Uses a bare schema
+    map (tool defined but no x-mtg) so the scanner falls to heuristic
+    on every arg, independent of the default FUNCTIONS registry."""
     br = BenchmarkResult(
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
-    matrix = build_matrix([br])  # no schema map → 100% heuristic
+    matrix = build_matrix([br], tool_schema_map=_BARE_SCHEMA_MAP)
     return write_bundle(matrix, tmp_path / "heuristic-bundle")
 
 

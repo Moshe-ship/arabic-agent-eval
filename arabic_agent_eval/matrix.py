@@ -29,8 +29,10 @@ a blog post or paper.
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 import json
 import random
+import subprocess
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -412,12 +414,99 @@ def _bootstrap_ci_95(
     return (means[lo_idx], means[hi_idx])
 
 
+def _git_sha_for_package(module_name: str) -> Optional[str]:
+    """Return the HEAD git SHA of the checkout that contains `module_name`,
+    or None if the module is not importable or the checkout isn't a git
+    repo. Best-effort — we never crash a scan on a missing SHA.
+
+    Captures code provenance for aae, mtg, toolproof, hurmoz so every
+    row in a bundle answers "exactly which code produced this?"
+    """
+    try:
+        module = __import__(module_name)
+    except ImportError:
+        return None
+    module_path = getattr(module, "__file__", None)
+    if not module_path:
+        return None
+    repo_path = Path(module_path).resolve().parent
+    for _ in range(6):
+        if (repo_path / ".git").exists():
+            break
+        if repo_path.parent == repo_path:
+            return None
+        repo_path = repo_path.parent
+    else:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    sha = result.stdout.strip()
+    return sha if len(sha) == 40 else None
+
+
+def _fingerprint_schema_map(tool_schema_map: Optional[dict[str, dict]]) -> str:
+    """Stable sha256 hash of the tool-schema map's x-mtg blocks.
+
+    Fingerprint covers only the x-mtg annotations because the rest of
+    the schema (descriptions, examples) is editorial and can change
+    without affecting validation semantics. Two schema maps with the
+    same x-mtg surface produce the same fingerprint.
+
+    Empty map → sha256 of the empty string, recorded so it's
+    distinguishable from a missing/null fingerprint.
+    """
+    if not tool_schema_map:
+        return hashlib.sha256(b"").hexdigest()
+    payload: dict[str, dict] = {}
+    for tool_name, schema in sorted(tool_schema_map.items()):
+        x_mtgs: dict[str, dict] = {}
+        for key in ("parameters", "input_schema"):
+            container = schema.get(key)
+            if not isinstance(container, dict):
+                continue
+            props = container.get("properties") or {}
+            for arg_name, prop in props.items():
+                if isinstance(prop, dict) and "x-mtg" in prop:
+                    x_mtgs[arg_name] = prop["x-mtg"]
+        if x_mtgs:
+            payload[tool_name] = x_mtgs
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                            separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def _code_provenance() -> dict[str, str]:
+    """Collect HEAD git SHAs for every package in the MTG stack that's
+    importable. Missing packages get None entries so the presence or
+    absence is still auditable downstream."""
+    return {
+        pkg: _git_sha_for_package(pkg)
+        for pkg in ("arabic_agent_eval", "mtg", "toolproof")
+    }
+
+
 def _new_run_metadata(
     benchmark_result: "BenchmarkResult",
     tool_schema_map: Optional[dict[str, dict]],
 ) -> dict[str, Any]:
     """Stamp provenance on this scan so downstream consumers can
-    deduplicate runs and trace back which inputs produced a table."""
+    deduplicate runs and trace back which inputs produced a table.
+
+    Captures:
+    - run_id / scanned_at — identity and time
+    - provider / model / n_items / n_errors — scope
+    - schema_map_tools — which tools the scanner was wired against
+    - schema_map_fingerprint — sha256 of the x-mtg annotations used
+    - code_shas — git HEAD for each MTG-stack repo present in the env
+    - scanner_version — pinned code version
+    """
     return {
         "run_id": str(uuid.uuid4()),
         "scanned_at": _dt.datetime.now(_dt.timezone.utc).isoformat(
@@ -428,7 +517,9 @@ def _new_run_metadata(
         "n_items": benchmark_result.total_items,
         "n_errors": len(benchmark_result.errors),
         "schema_map_tools": sorted((tool_schema_map or {}).keys()),
-        "scanner_version": "mtg-matrix/0.2",
+        "schema_map_fingerprint": _fingerprint_schema_map(tool_schema_map),
+        "code_shas": _code_provenance(),
+        "scanner_version": "mtg-matrix/0.3",
     }
 
 

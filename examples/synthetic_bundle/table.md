@@ -32,4 +32,4 @@ Granular view of the same classification (worst family wins per arg).
 
 ## Run provenance
 
-- `example` / `synthetic-v1` — run_id `895ef47b` · scanned 2026-04-19T04:57:20+00:00 · 5 items, 0 errors · scanner `mtg-matrix/0.2`
+- `example` / `synthetic-v1` — run_id `8bc4d68e` · scanned 2026-04-19T14:21:14+00:00 · 5 items, 0 errors · scanner `mtg-matrix/0.3`

@@ -1,0 +1,33 @@
+name: docs-claims-gate
+
+# Blocks PRs that add model-performance claims to Markdown docs without
+# referencing a bundle under bundles/. Complements publish-gate.yml
+# (which validates the bundles themselves). Once a real bundle is
+# committed, every numeric claim in docs must cite one.
+
+on:
+  pull_request:
+    paths:
+      - '**.md'
+      - 'scripts/check_docs_claims.py'
+      - 'bundles/**'
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need the full history to diff against base
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run docs-claims gate
+        run: |
+          python scripts/check_docs_claims.py \
+            --base "origin/${{ github.event.pull_request.base.ref }}" \
+            --ci
