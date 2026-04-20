@@ -1,0 +1,762 @@
+{
+  "rows": [
+    {
+      "baseline_ci_95": [
+        0.2341,
+        0.6151
+      ],
+      "baseline_score": 0.4074,
+      "bidi_violation_rate": 0.0417,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {
+        "bidi": 0.0833
+      },
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {
+        "security": 0.0833
+      },
+      "median_latency_ms": null,
+      "model": "qwen/qwen3.6-plus",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.2341,
+        0.6151
+      ],
+      "repaired_score": 0.4181,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "qwen/qwen3.6-plus",
+        "n_errors": 1,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "qwen/qwen3.6-plus",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "3ddc9bbc-1884-4b73-94f8-7fc2e39381cd",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 24,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
+        "get_weather",
+        "search_restaurants",
+        "send_message",
+        "translate_text"
+      ],
+      "total_calls_scanned": 24,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.125
+    },
+    {
+      "baseline_ci_95": [
+        0.1811,
+        0.5402
+      ],
+      "baseline_score": 0.3423,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {},
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {},
+      "median_latency_ms": null,
+      "model": "anthropic/claude-opus-4.7",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.1811,
+        0.5402
+      ],
+      "repaired_score": 0.3527,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "anthropic/claude-opus-4.7",
+        "n_errors": 0,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "anthropic/claude-opus-4.7",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "63dda5a2-1ae0-4a54-a881-d8dde3739139",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 22,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
+        "get_weather",
+        "search_restaurants",
+        "send_message",
+        "send_money",
+        "translate_text"
+      ],
+      "total_calls_scanned": 22,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.0455
+    },
+    {
+      "baseline_ci_95": [
+        0.1687,
+        0.4937
+      ],
+      "baseline_score": 0.3236,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {
+        "homoglyph": 0.0455
+      },
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0455,
+      "layer_rates": {
+        "security": 0.0455
+      },
+      "median_latency_ms": null,
+      "model": "minimax/minimax-m2.7",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.1687,
+        0.4937
+      ],
+      "repaired_score": 0.3236,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "minimax/minimax-m2.7",
+        "n_errors": 0,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "minimax/minimax-m2.7",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "48603223-94cb-4262-930b-c35e3fb9ee2f",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 22,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
+        "get_weather",
+        "search_flights",
+        "search_restaurants",
+        "send_message",
+        "send_money"
+      ],
+      "total_calls_scanned": 22,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.0455
+    },
+    {
+      "baseline_ci_95": [
+        0.151,
+        0.4767
+      ],
+      "baseline_score": 0.3199,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {
+        "bidi": 0.0435
+      },
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {
+        "security": 0.0435
+      },
+      "median_latency_ms": null,
+      "model": "moonshotai/kimi-k2.5",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.151,
+        0.4767
+      ],
+      "repaired_score": 0.3132,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "moonshotai/kimi-k2.5",
+        "n_errors": 0,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "moonshotai/kimi-k2.5",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "79ed9a40-5e35-4e20-9962-b9610b67b809",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 23,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "book_car",
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
+        "get_weather",
+        "search_restaurants",
+        "send_message",
+        "translate_text"
+      ],
+      "total_calls_scanned": 23,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.087
+    },
+    {
+      "baseline_ci_95": [
+        0.1356,
+        0.5264
+      ],
+      "baseline_score": 0.2798,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {},
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {},
+      "median_latency_ms": null,
+      "model": "z-ai/glm-5.1",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.1356,
+        0.5264
+      ],
+      "repaired_score": 0.3166,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "z-ai/glm-5.1",
+        "n_errors": 2,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "z-ai/glm-5.1",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "2f054f4c-52ca-49ba-8b52-243a580db008",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 21,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
+        "get_weather",
+        "search_restaurants",
+        "translate_text"
+      ],
+      "total_calls_scanned": 21,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.0476
+    },
+    {
+      "baseline_ci_95": [
+        0.1,
+        0.4035
+      ],
+      "baseline_score": 0.2431,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {},
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {},
+      "median_latency_ms": null,
+      "model": "openai/gpt-5.4",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.1,
+        0.4035
+      ],
+      "repaired_score": 0.2535,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "openai/gpt-5.4",
+        "n_errors": 0,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "openai/gpt-5.4",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "85702395-bc4e-403b-b080-e5ff8bb1fd3c",
+        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 17,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "convert_currency",
+        "get_news",
+        "get_weather",
+        "search_restaurants",
+        "send_message",
+        "translate_text"
+      ],
+      "total_calls_scanned": 17,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.0588
+    },
+    {
+      "baseline_ci_95": [
+        0.0167,
+        0.2858
+      ],
+      "baseline_score": 0.1298,
+      "bidi_violation_rate": 0.0,
+      "calls_with_concrete_repair": 0,
+      "diagnostic": false,
+      "dialect_drift_rate": 0.0,
+      "family_rates": {},
+      "heuristic_arg_count": 0,
+      "heuristic_scan_rate": 0.0,
+      "heuristic_scan_threshold": 0.1,
+      "homoglyph_rate": 0.0,
+      "layer_rates": {},
+      "median_latency_ms": null,
+      "model": "google/gemini-2.5-pro",
+      "provider": "openrouter",
+      "repair_quality_mean": null,
+      "repair_quality_n": 0,
+      "repair_rate": 0.0,
+      "repaired_ci_95": [
+        0.0167,
+        0.2858
+      ],
+      "repaired_score": 0.1402,
+      "run_metadata": {
+        "code_clean": {
+          "arabic_agent_eval": true,
+          "mtg": true,
+          "toolproof": true
+        },
+        "code_shas": {
+          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
+          "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
+        },
+        "dataset_fingerprint": "abf2d13c143e787f09f3c74c007afeac0e726d2fe2ee8e48847167c3e8d640d4",
+        "dataset_version": "2026-04-arabic-v1",
+        "environment": {
+          "dependency_versions": {
+            "arabic_agent_eval": "0.1.0",
+            "mtg": "0.1.0",
+            "toolproof": "0.5.0"
+          },
+          "fingerprint": "4fe051f18978c433fe050861c27c2579a5173ce071e87292d794465fc5c3ebdd",
+          "platform": "macOS-26.3.1-arm64-arm-64bit-Mach-O",
+          "python_implementation": "CPython",
+          "python_version": "3.14.3"
+        },
+        "model": "google/gemini-2.5-pro",
+        "n_errors": 0,
+        "n_items": 24,
+        "provider": "openrouter",
+        "provider_provenance": {
+          "model_id": "google/gemini-2.5-pro",
+          "provider_base_url": "https://openrouter.ai/api/v1",
+          "request_config_fingerprint": null,
+          "request_config_schema_version": null
+        },
+        "run_id": "4f1bb103-f5df-4e84-b6e9-51ab577f0731",
+        "scanned_at": "2026-04-20T15:49:11+00:00",
+        "scanner_version": "mtg-matrix/0.6",
+        "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
+        "schema_map_tools": [
+          "book_car",
+          "book_hotel",
+          "book_table",
+          "calculate_zakat",
+          "check_visa_status",
+          "convert_currency",
+          "find_quran_verse",
+          "get_news",
+          "get_prayer_times",
+          "get_stock_price",
+          "get_time",
+          "get_traffic",
+          "get_weather",
+          "order_food",
+          "schedule_meeting",
+          "search_flights",
+          "search_jobs",
+          "search_restaurants",
+          "send_message",
+          "send_money",
+          "set_reminder",
+          "translate_text"
+        ]
+      },
+      "schema_bound_arg_count": 7,
+      "schema_bound_rate": 1.0,
+      "schema_covered_tools": [
+        "get_weather",
+        "search_restaurants",
+        "translate_text"
+      ],
+      "total_calls_scanned": 7,
+      "total_cost_usd": null,
+      "total_items": 24,
+      "transliteration_rate": 0.0,
+      "violation_rate": 0.1429
+    }
+  ]
+}
