@@ -1254,11 +1254,19 @@ def load_benchmark_result_from_json(path: Path) -> "BenchmarkResult":
             setattr(er, "latency_ms", r["latency_ms"])
         results.append(er)
 
-    return BenchmarkResult(
+    br = BenchmarkResult(
         provider=data.get("provider", "unknown"),
         model=data.get("model", "unknown"),
         results=results,
     )
+    # Optional provenance fields — the publish gate requires these on
+    # real bundles. Loader passes them through verbatim if present in
+    # the run JSON; callers with structured metadata should populate
+    # run_metadata and the gate reads it from there.
+    for attr in ("provider_base_url", "model_id", "run_metadata"):
+        if attr in data and data[attr]:
+            setattr(br, attr, data[attr])
+    return br
 
 
 __all__ = [
