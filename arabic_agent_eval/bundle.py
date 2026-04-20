@@ -88,6 +88,15 @@ class BundleManifest:
     #   so we can distinguish "build time" from "manifest write time")
     invocation: dict[str, Any] = field(default_factory=dict)
     files: dict[str, str] = field(default_factory=dict)   # path → sha256
+    # Structured index over raw/ files. Maps each `raw/<filename>` key
+    # to a small descriptor dict so reviewers don't guess what each
+    # raw file is. Recognized descriptor keys:
+    #   type (e.g. "provider_output", "trace", "request", "system_prompt"),
+    #   source (e.g. "openrouter", "anthropic", "local-run"),
+    #   redacted (bool), redaction_note (str), item_id (optional).
+    # Schema is minimal on purpose — extra keys permitted but preferred
+    # ones keep reviews uniform.
+    raw_index: dict[str, dict[str, Any]] = field(default_factory=dict)
     thresholds: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_THRESHOLDS))
     row_summaries: list[dict[str, Any]] = field(default_factory=list)
 
@@ -100,6 +109,7 @@ class BundleManifest:
                 "has_runs": self.has_runs,
                 "invocation": self.invocation,
                 "files": self.files,
+                "raw_index": self.raw_index,
                 "thresholds": self.thresholds,
                 "row_summaries": self.row_summaries,
             },
@@ -117,6 +127,7 @@ class BundleManifest:
             has_runs=bool(data.get("has_runs", False)),
             invocation=dict(data.get("invocation", {})),
             files=dict(data.get("files", {})),
+            raw_index=dict(data.get("raw_index", {})),
             thresholds=dict(data.get("thresholds", {})),
             row_summaries=list(data.get("row_summaries", [])),
         )
@@ -171,6 +182,7 @@ def write_bundle(
     html: Optional[str] = None,
     run_json_files: Optional[list[Path]] = None,
     raw_files: Optional[list[Path]] = None,
+    raw_index: Optional[dict[str, dict[str, Any]]] = None,
     thresholds: Optional[dict[str, float]] = None,
     invocation: Optional[dict[str, Any]] = None,
 ) -> Path:
@@ -248,6 +260,23 @@ def write_bundle(
     scanner_version = next(iter(versions)) if len(versions) == 1 else ""
 
     bundle_has_runs = any(rel.startswith("runs/") for rel in written)
+
+    # Normalize raw_index keys to the `raw/<filename>` form that
+    # matches `files`. Reject dangling entries — every raw_index key
+    # must correspond to a raw file that was actually written.
+    raw_index_normalized: dict[str, dict[str, Any]] = {}
+    if raw_index:
+        written_raw = {rel for rel in written if rel.startswith("raw/")}
+        for key, entry in raw_index.items():
+            normalized = key if key.startswith("raw/") else f"raw/{key}"
+            if normalized not in written_raw:
+                raise BundleError(
+                    f"raw_index entry {key!r} does not correspond to any "
+                    f"file in raw/. Either missing from raw_files, or the "
+                    f"key is a typo."
+                )
+            raw_index_normalized[normalized] = dict(entry)
+
     manifest = BundleManifest(
         bundle_version=BUNDLE_VERSION,
         scanner_version=scanner_version,
@@ -255,6 +284,7 @@ def write_bundle(
         has_runs=bundle_has_runs,
         invocation=dict(invocation or {}),
         files=written,
+        raw_index=raw_index_normalized,
         thresholds=dict(thresholds or DEFAULT_THRESHOLDS),
         row_summaries=[_row_summary(r) for r in matrix.to_dict()["rows"]],
     )

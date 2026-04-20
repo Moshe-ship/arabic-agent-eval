@@ -601,12 +601,32 @@ def _git_clean_provenance() -> dict[str, Optional[bool]]:
     }
 
 
+# Request-config schema version. Bumped whenever the canonicalization
+# rule below changes — old fingerprints stay comparable within their
+# own schema version, and downstream consumers can see at a glance
+# whether two fingerprints are comparable.
+#
+# rcs-v1 canonicalization:
+#   - `json.dumps(config, sort_keys=True, ensure_ascii=False,
+#                  separators=(",", ":"))`
+#   - UTF-8 encode
+#   - sha256 hex digest
+#
+# Future changes (e.g., dropping `None`-valued keys, normalizing
+# numeric types) bump this to `rcs-v2` and document the diff here.
+REQUEST_CONFIG_SCHEMA_VERSION = "rcs-v1"
+
+
 def _fingerprint_request_config(config: Optional[dict]) -> Optional[str]:
     """Stable sha256 over a request-config dict (temperature, max_tokens,
     top_p, etc.). Callers set `request_config` on their BenchmarkResult
     so the matrix can stamp the fingerprint per row. Same model name
     with different config produces different fingerprints — makes
     backend drift visible.
+
+    Canonicalization is frozen under REQUEST_CONFIG_SCHEMA_VERSION. Two
+    fingerprints are comparable only when both rows carry the same
+    schema version.
 
     Returns None when the config is empty (distinguishes "no config
     captured" from "hash of empty dict")."""
@@ -622,14 +642,21 @@ def _provider_provenance(benchmark_result: "BenchmarkResult") -> dict[str, Any]:
     """Collect provider / request-side provenance. Opt-in: callers set
     attributes on BenchmarkResult via setattr (matching the cost_usd /
     latency_ms pattern). Missing attributes → None entries, so the
-    presence or absence of each is always auditable."""
+    presence or absence of each is always auditable.
+
+    The fingerprint is paired with `request_config_schema_version` so
+    downstream can tell which canonicalization rule produced it."""
     base_url = getattr(benchmark_result, "provider_base_url", None)
     model_id = getattr(benchmark_result, "model_id", None)
     request_config = getattr(benchmark_result, "request_config", None)
+    fingerprint = _fingerprint_request_config(request_config)
     return {
         "provider_base_url": base_url,
         "model_id": model_id,
-        "request_config_fingerprint": _fingerprint_request_config(request_config),
+        "request_config_fingerprint": fingerprint,
+        "request_config_schema_version": (
+            REQUEST_CONFIG_SCHEMA_VERSION if fingerprint is not None else None
+        ),
     }
 
 

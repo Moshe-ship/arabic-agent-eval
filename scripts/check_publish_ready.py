@@ -163,6 +163,24 @@ def check_bundle(
                     f"Re-scan with mtg-matrix/0.5+ (which writes the field)."
                 )
 
+        # provider_provenance — real bundles must carry provider_base_url
+        # and model_id so "same model name, different backend settings"
+        # is impossible. request_config_fingerprint is recommended but
+        # not required (a caller may legitimately not capture config).
+        if not synthetic:
+            pp = md.get("provider_provenance") or {}
+            for required_key in ("provider_base_url", "model_id"):
+                if not pp.get(required_key):
+                    reasons.append(
+                        f"{label}: provider_provenance.{required_key} is "
+                        f"missing or empty — published real bundles must "
+                        f"pin the backend URL and canonical model ID so "
+                        f"same-name/different-settings collisions are "
+                        f"detectable. Set it via "
+                        f"`setattr(benchmark_result, {required_key!r}, "
+                        f"...)` before scanning."
+                    )
+
         # code_shas must carry a non-empty git SHA for every REQUIRED
         # package. Optional packages (mtg, toolproof) are permitted to
         # be None if they weren't importable at scan time, but the

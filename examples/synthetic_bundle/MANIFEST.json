@@ -1,22 +1,23 @@
 {
   "bundle_version": "1",
-  "created_at": "2026-04-20T02:02:42+00:00",
+  "created_at": "2026-04-20T02:11:02+00:00",
   "files": {
-    "matrix.json": "86e1d82f4430716a692e2a9bf3f2223839485f75b2630cc6367bc0dd1e9c6e4c",
+    "matrix.json": "bb905565c5f5e9e0817f3141cb4925e49b5331f4180b02f2f16a3af840b2edf7",
     "table.csv": "80ff9458945842ca79424527c1fed4a74f990e7d0b4e75fa5125caf5515625e7",
-    "table.md": "5a753391047c53a727aebafb3126c6d8b07751cc7178c4bb8ff180e9d38c13e6"
+    "table.md": "40b50eed5ca85e330658198502540cd015ea7371596157af99c1aa12198424da"
   },
   "has_runs": false,
   "invocation": {
-    "built_at": "2026-04-20T02:02:42+00:00",
+    "built_at": "2026-04-20T02:11:02+00:00",
     "generator": "scripts/gen_example_bundle.py",
     "generator_version": "gen_example_bundle/0.2",
     "git_branch": "main",
-    "git_ref": "556783ade055abd12cd4040624f790428455e755",
+    "git_ref": "1544927c212b1b3cff6ec380dac0d3dfd696a521",
     "note": "Fabricated bundle for format demonstration — NOT a model result.",
     "schema_map_source": "../hurmoz/tool-schemas",
     "synthetic": true
   },
+  "raw_index": {},
   "row_summaries": [
     {
       "diagnostic": false,
@@ -27,8 +28,8 @@
       "model": "synthetic-v1",
       "n_items": 5,
       "provider": "example",
-      "run_id": "0baf9bf1-469a-49ba-9237-9fcfc47d2fc4",
-      "scanned_at": "2026-04-20T02:02:41+00:00",
+      "run_id": "925b2ad3-81fa-4960-8066-dcf08ae5a185",
+      "scanned_at": "2026-04-20T02:11:02+00:00",
       "scanner_version": "mtg-matrix/0.6",
       "schema_bound_arg_count": 12,
       "schema_bound_rate": 1.0,

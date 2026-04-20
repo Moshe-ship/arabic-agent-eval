@@ -299,3 +299,81 @@ def test_raw_files_reject_missing_source(tmp_path: Path):
         write_bundle(
             matrix, tmp_path / "bundle", raw_files=[missing],
         )
+
+
+# ---------- raw evidence index ----------
+
+
+def test_raw_index_stamped_in_manifest(tmp_path: Path):
+    """raw_index entries land in manifest.raw_index, keyed by the
+    `raw/<filename>` path that matches the files dict."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "req-1.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={
+            "req-1.json": {
+                "type": "request",
+                "source": "openrouter",
+                "redacted": True,
+                "redaction_note": "API key stripped",
+            },
+        },
+    )
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert "raw/req-1.json" in manifest.raw_index
+    entry = manifest.raw_index["raw/req-1.json"]
+    assert entry["type"] == "request"
+    assert entry["source"] == "openrouter"
+    assert entry["redacted"] is True
+    assert entry["redaction_note"] == "API key stripped"
+
+
+def test_raw_index_rejects_dangling_entry(tmp_path: Path):
+    """A raw_index entry without a matching raw file must fail loud —
+    stale entries would be misleading."""
+    matrix = _minimal_matrix()
+    with pytest.raises(BundleError, match="does not correspond"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=None,
+            raw_index={"ghost.json": {"type": "request"}},
+        )
+
+
+def test_raw_index_accepts_prefixed_or_bare_key(tmp_path: Path):
+    """Callers can pass keys as `req.json` or `raw/req.json` — the
+    writer normalizes to the `raw/` form."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    (raw_src / "b.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={
+            "a.json": {"type": "request"},
+            "raw/b.json": {"type": "trace"},
+        },
+    )
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.raw_index["raw/a.json"]["type"] == "request"
+    assert manifest.raw_index["raw/b.json"]["type"] == "trace"
+
+
+def test_raw_index_empty_by_default(tmp_path: Path):
+    """Without raw_index the manifest section stays {} but is present."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.raw_index == {}

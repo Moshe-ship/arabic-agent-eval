@@ -804,6 +804,24 @@ def test_provider_provenance_absent_when_attrs_missing():
     assert pp.get("provider_base_url") is None
     assert pp.get("model_id") is None
     assert pp.get("request_config_fingerprint") is None
+    # Schema-version pinning only stamped when a fingerprint exists.
+    assert pp.get("request_config_schema_version") is None
+
+
+def test_request_config_fingerprint_stamps_schema_version():
+    """Every non-None fingerprint comes with a schema version so two
+    fingerprints are comparable only when the versions match."""
+    from arabic_agent_eval.matrix import REQUEST_CONFIG_SCHEMA_VERSION
+
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    setattr(br, "request_config", {"temperature": 0.8})
+    row = scan_with_mtg(br)
+    pp = row.run_metadata["provider_provenance"]
+    assert pp["request_config_schema_version"] == REQUEST_CONFIG_SCHEMA_VERSION
+    assert pp["request_config_schema_version"] == "rcs-v1"
 
 
 def test_to_dict_surfaces_ci_and_heuristic_rate():

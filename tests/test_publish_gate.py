@@ -39,6 +39,16 @@ def _item(item_id: str, value: str = "أبي أحجز") -> EvalResult:
     )
 
 
+def _br(results: list, provider: str = "p", model: str = "m") -> BenchmarkResult:
+    """Build a BenchmarkResult with provider provenance populated — the
+    gate requires `provider_base_url` and `model_id` on every real-bundle
+    row, so every test builder should set them."""
+    br = BenchmarkResult(provider=provider, model=model, results=results)
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
+    return br
+
+
 _SCHEMA_MAP = {
     "send_message": {
         "name": "send_message",
@@ -61,13 +71,16 @@ _SCHEMA_MAP = {
 
 def _clean_bundle(tmp_path: Path) -> Path:
     """A publish-ready bundle: 2+ items, schema-bound (heuristic_scan_rate=0),
-    includes a `runs/` source copy. Non-diagnostic."""
+    includes a `runs/` source copy, provider provenance populated.
+    Non-diagnostic."""
     br = BenchmarkResult(
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    # Provider provenance required by the gate on real bundles
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
-    # Provide a source run file so `runs/` populates in the bundle
     run_src = tmp_path / "src.json"
     run_src.write_text(
         json.dumps({"provider": "p", "model": "m", "results": []}),
@@ -98,6 +111,8 @@ def _heuristic_bundle(tmp_path: Path) -> Path:
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_BARE_SCHEMA_MAP)
     return write_bundle(matrix, tmp_path / "heuristic-bundle")
 
@@ -348,6 +363,8 @@ def test_gate_rejects_single_item_with_missing_runs(tmp_path: Path):
         provider="p", model="m",
         results=[_item("solo")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
     bundle_dir = tmp_path / "solo"
     write_bundle(matrix, bundle_dir)
@@ -366,6 +383,8 @@ def test_gate_requires_synthetic_flag_match(tmp_path: Path):
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
     bundle = write_bundle(
         matrix, tmp_path / "synth",
@@ -385,6 +404,8 @@ def test_gate_rejects_synthetic_flag_without_manifest_marker(tmp_path: Path):
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
     run_src = tmp_path / "src.json"
     run_src.write_text("{}", encoding="utf-8")
@@ -406,6 +427,8 @@ def test_gate_rejects_real_bundle_with_unreceived_build_override(tmp_path: Path)
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
     run_src = tmp_path / "src.json"
     run_src.write_text("{}", encoding="utf-8")
@@ -432,6 +455,8 @@ def test_gate_synthetic_waives_build_override_asymmetry(tmp_path: Path):
         provider="p", model="m",
         results=[_item("a"), _item("b")],
     )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
     matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
     bundle = write_bundle(
         matrix, tmp_path / "synth",
@@ -443,6 +468,57 @@ def test_gate_synthetic_waives_build_override_asymmetry(tmp_path: Path):
     # --synthetic alone must pass, without needing --allow-dirty etc.
     result = _run_gate(bundle, "--synthetic")
     assert result.returncode == 0, result.stderr
+
+
+def test_gate_rejects_missing_provider_base_url(tmp_path: Path):
+    """Real bundles must carry provider_base_url on every row. Missing
+    → gate rejects with actionable error."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        pp = row["run_metadata"].setdefault("provider_provenance", {})
+        pp["provider_base_url"] = None
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle, "--allow-dirty")
+    assert result.returncode != 0
+    assert "provider_base_url" in result.stderr
+
+
+def test_gate_rejects_missing_model_id(tmp_path: Path):
+    """Real bundles must carry model_id on every row."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        pp = row["run_metadata"].setdefault("provider_provenance", {})
+        pp["model_id"] = None
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle, "--allow-dirty")
+    assert result.returncode != 0
+    assert "model_id" in result.stderr
 
 
 def test_gate_rejects_dirty_via_manifest_edit(tmp_path: Path):
