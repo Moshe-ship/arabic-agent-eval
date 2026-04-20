@@ -33,12 +33,12 @@
       "repaired_score": 0.4181,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -65,8 +65,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "3ddc9bbc-1884-4b73-94f8-7fc2e39381cd",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "22f84a70-19da-433e-9f11-bc2730502abc",
+        "scanned_at": "2026-04-20T18:41:07+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -140,12 +140,12 @@
       "repaired_score": 0.3527,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -172,8 +172,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "63dda5a2-1ae0-4a54-a881-d8dde3739139",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "11dc0532-652e-47e2-af4c-a3bb4d4060e0",
+        "scanned_at": "2026-04-20T18:41:07+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -252,12 +252,12 @@
       "repaired_score": 0.3236,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -284,8 +284,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "48603223-94cb-4262-930b-c35e3fb9ee2f",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "2c47c7c7-03e0-42cc-acb2-d02e7bdfcf4c",
+        "scanned_at": "2026-04-20T18:41:08+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -364,12 +364,12 @@
       "repaired_score": 0.3132,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -396,8 +396,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "79ed9a40-5e35-4e20-9962-b9610b67b809",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "b93d7266-5784-455d-8139-3add3fbe5583",
+        "scanned_at": "2026-04-20T18:41:08+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -472,12 +472,12 @@
       "repaired_score": 0.3166,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -504,8 +504,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "2f054f4c-52ca-49ba-8b52-243a580db008",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "83a6e892-2317-4d92-9de4-21b08183ce07",
+        "scanned_at": "2026-04-20T18:41:08+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -578,12 +578,12 @@
       "repaired_score": 0.2535,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -610,8 +610,8 @@
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "85702395-bc4e-403b-b080-e5ff8bb1fd3c",
-        "scanned_at": "2026-04-20T15:49:10+00:00",
+        "run_id": "e13ba622-eeac-40f1-b3b3-276d2a82c7e1",
+        "scanned_at": "2026-04-20T18:41:08+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -657,39 +657,43 @@
     },
     {
       "baseline_ci_95": [
-        0.0167,
-        0.2858
+        0.1222,
+        0.4184
       ],
-      "baseline_score": 0.1298,
+      "baseline_score": 0.2591,
       "bidi_violation_rate": 0.0,
       "calls_with_concrete_repair": 0,
       "diagnostic": false,
       "dialect_drift_rate": 0.0,
-      "family_rates": {},
+      "family_rates": {
+        "homoglyph": 0.05
+      },
       "heuristic_arg_count": 0,
       "heuristic_scan_rate": 0.0,
       "heuristic_scan_threshold": 0.1,
-      "homoglyph_rate": 0.0,
-      "layer_rates": {},
+      "homoglyph_rate": 0.05,
+      "layer_rates": {
+        "security": 0.05
+      },
       "median_latency_ms": null,
-      "model": "google/gemini-2.5-pro",
+      "model": "google/gemini-3.1-pro-preview",
       "provider": "openrouter",
       "repair_quality_mean": null,
       "repair_quality_n": 0,
       "repair_rate": 0.0,
       "repaired_ci_95": [
-        0.0167,
-        0.2858
+        0.1222,
+        0.4184
       ],
-      "repaired_score": 0.1402,
+      "repaired_score": 0.2677,
       "run_metadata": {
         "code_clean": {
-          "arabic_agent_eval": true,
+          "arabic_agent_eval": false,
           "mtg": true,
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "c9418ca45cbc72c5865fab14f35612165ab25e6e",
+          "arabic_agent_eval": "60cdf2b7afc3b3070b0e49059835ba842c31ad03",
           "mtg": "9de4915f82172265fb646fc4f3d307de3f595d96",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -706,18 +710,18 @@
           "python_implementation": "CPython",
           "python_version": "3.14.3"
         },
-        "model": "google/gemini-2.5-pro",
+        "model": "google/gemini-3.1-pro-preview",
         "n_errors": 0,
         "n_items": 24,
         "provider": "openrouter",
         "provider_provenance": {
-          "model_id": "google/gemini-2.5-pro",
+          "model_id": "google/gemini-3.1-pro-preview",
           "provider_base_url": "https://openrouter.ai/api/v1",
           "request_config_fingerprint": null,
           "request_config_schema_version": null
         },
-        "run_id": "4f1bb103-f5df-4e84-b6e9-51ab577f0731",
-        "scanned_at": "2026-04-20T15:49:11+00:00",
+        "run_id": "48b72fd3-1669-42cc-807a-adc937a2921f",
+        "scanned_at": "2026-04-20T18:41:08+00:00",
         "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "e600bb838728fcb88bba9152ea91e74a5958abf6fb0c930916501dd2dfea4db2",
         "schema_map_tools": [
@@ -745,18 +749,23 @@
           "translate_text"
         ]
       },
-      "schema_bound_arg_count": 7,
+      "schema_bound_arg_count": 20,
       "schema_bound_rate": 1.0,
       "schema_covered_tools": [
+        "book_car",
+        "convert_currency",
+        "get_news",
+        "get_stock_price",
         "get_weather",
         "search_restaurants",
+        "send_message",
         "translate_text"
       ],
-      "total_calls_scanned": 7,
+      "total_calls_scanned": 20,
       "total_cost_usd": null,
       "total_items": 24,
       "transliteration_rate": 0.0,
-      "violation_rate": 0.1429
+      "violation_rate": 0.1
     }
   ]
 }
