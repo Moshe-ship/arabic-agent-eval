@@ -31,3 +31,7 @@ aae = "arabic_agent_eval.cli:main"
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["arabic_agent_eval*"]
+exclude = ["tests*", "scripts*", "data*", "docs*", "examples*", "bundles*"]
