@@ -180,12 +180,62 @@ def main() -> int:
         help="Pass --allow-diagnostic to the gate (use when publishing a "
              "deliberately-diagnostic run).",
     )
+    p.add_argument(
+        "--allow-dirty", action="store_true",
+        help="Allow building from a dirty git checkout. Unsafe — the "
+             "code_sha won't match the worktree that produced the "
+             "bundle. Stamped into invocation.overrides so the "
+             "relaxation is auditable.",
+    )
+    p.add_argument(
+        "--allow-no-schemas", action="store_true",
+        help="Allow building without --schemas. Every arg will fall to "
+             "heuristic spec resolution and every row will be diagnostic.",
+    )
+    p.add_argument(
+        "--allow-diagnostic", action="store_true",
+        help="Allow bundle to contain diagnostic rows. Without this "
+             "flag, build_bundle.py refuses to write a bundle where "
+             "any row is diagnostic.",
+    )
+    p.add_argument(
+        "--allow-missing-shas", action="store_true",
+        help="Allow building when required code_shas are empty (e.g. "
+             "running from a pip-installed package, not a git checkout).",
+    )
     args = p.parse_args()
+
+    # Strict default: refuse ambiguous provenance. Each override flag
+    # flips a check off and gets recorded in invocation.overrides.
+    refusals: list[str] = []
+    overrides: list[str] = []
 
     schema_map = None
     if args.schemas is not None:
         schema_map = _load_schema_map(args.schemas)
         print(f"loaded {len(schema_map)} tool schemas from {args.schemas}")
+    else:
+        if args.allow_no_schemas:
+            overrides.append("allow_no_schemas")
+        else:
+            refusals.append(
+                "no --schemas provided — every row would be diagnostic. "
+                "Pass an annotated tool-schema map or --allow-no-schemas "
+                "to acknowledge the diagnostic-only build."
+            )
+
+    # Dirty-tree check: build from aae's worktree (where this script lives)
+    from arabic_agent_eval.matrix import _git_clean_for_package  # reuse helper
+    clean = _git_clean_for_package("arabic_agent_eval")
+    if clean is False:
+        if args.allow_dirty:
+            overrides.append("allow_dirty")
+        else:
+            refusals.append(
+                "arabic_agent_eval repo is dirty — code_sha won't match the "
+                "worktree that produced the bundle. Commit/stash your changes "
+                "or pass --allow-dirty to acknowledge the drift."
+            )
 
     benchmarks = []
     for run in args.run:
@@ -196,6 +246,39 @@ def main() -> int:
     print(f"loaded {len(benchmarks)} benchmark runs")
 
     matrix = build_matrix(benchmarks, tool_schema_map=schema_map)
+
+    # Post-build provenance checks, done on the actual matrix rows.
+    diagnostic_rows = [r for r in matrix.rows if r.diagnostic]
+    if diagnostic_rows:
+        if args.allow_diagnostic:
+            overrides.append("allow_diagnostic")
+        else:
+            labels = ", ".join(f"{r.provider}/{r.model}" for r in diagnostic_rows)
+            refusals.append(
+                f"{len(diagnostic_rows)} diagnostic row(s): {labels}. "
+                f"Pass --allow-diagnostic to publish them anyway."
+            )
+
+    missing_shas: list[str] = []
+    for row in matrix.rows:
+        code_shas = (row.run_metadata or {}).get("code_shas") or {}
+        if not code_shas.get("arabic_agent_eval"):
+            missing_shas.append(f"{row.provider}/{row.model}:arabic_agent_eval")
+    if missing_shas:
+        if args.allow_missing_shas:
+            overrides.append("allow_missing_shas")
+        else:
+            refusals.append(
+                "missing required code_shas: " + ", ".join(missing_shas) +
+                ". Pass --allow-missing-shas to build anyway "
+                "(the bundle's code provenance will be weak)."
+            )
+
+    if refusals:
+        print("build_bundle.py refuses to build:", file=sys.stderr)
+        for r in refusals:
+            print(f"  - {r}", file=sys.stderr)
+        return 3
 
     html = _try_build_html(matrix) if args.html else None
 
@@ -211,11 +294,12 @@ def main() -> int:
         "built_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         "git_ref": git_ref,
         "git_branch": git_branch,
-        "schema_map_source": str(args.schemas) if args.schemas else "<default>",
+        "schema_map_source": str(args.schemas) if args.schemas else "<none>",
         "run_json_sha256": run_shas,
         "html_requested": bool(args.html),
         "gate_invoked": bool(args.gate),
         "gate_allow_diagnostic": bool(args.gate_allow_diagnostic),
+        "overrides": sorted(overrides),
     }
 
     bundle_path = write_bundle(

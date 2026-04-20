@@ -716,6 +716,52 @@ def test_dataset_fingerprint_ignores_model_output():
     assert _fingerprint_benchmark_items(br1) == _fingerprint_benchmark_items(br2)
 
 
+def test_run_metadata_carries_dataset_version():
+    """DATASET_VERSION constant flows into run_metadata so citations
+    can use a human-readable label alongside the sha256."""
+    from arabic_agent_eval import DATASET_VERSION
+
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    assert row.run_metadata["dataset_version"] == DATASET_VERSION
+    assert row.run_metadata["dataset_version"].startswith("2026-")
+
+
+def test_run_metadata_carries_environment_provenance():
+    """Python version / platform / dependency versions are stamped on
+    every row so reproducing the bundle doesn't require guessing the
+    env."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    env = row.run_metadata.get("environment") or {}
+    assert "python_version" in env
+    assert env["python_version"].count(".") == 2
+    assert "platform" in env
+    assert "dependency_versions" in env
+    assert env["dependency_versions"]["arabic_agent_eval"] is not None
+
+
+def test_run_metadata_carries_code_clean_flags():
+    """Per-package git-clean booleans. None = no signal; False = dirty;
+    True = clean. Paired with code_shas so reviewers can tell a SHA
+    points at committed code from one that lags a dirty worktree."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    code_clean = row.run_metadata.get("code_clean") or {}
+    assert set(code_clean.keys()) == {"arabic_agent_eval", "mtg", "toolproof"}
+    for v in code_clean.values():
+        assert v is None or isinstance(v, bool)
+
+
 def test_to_dict_surfaces_ci_and_heuristic_rate():
     br = BenchmarkResult(
         provider="t", model="m",

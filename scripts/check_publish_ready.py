@@ -39,7 +39,7 @@ from arabic_agent_eval.bundle import BundleError, DEFAULT_THRESHOLDS, load_bundl
 
 REQUIRED_METADATA_KEYS = (
     "run_id", "scanned_at", "provider", "model", "scanner_version",
-    "dataset_fingerprint",
+    "dataset_fingerprint", "dataset_version",
 )
 
 # Every MTG-stack package that was importable at scan time must carry

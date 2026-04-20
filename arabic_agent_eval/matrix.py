@@ -31,8 +31,10 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+import platform
 import random
 import subprocess
+import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -414,14 +416,8 @@ def _bootstrap_ci_95(
     return (means[lo_idx], means[hi_idx])
 
 
-def _git_sha_for_package(module_name: str) -> Optional[str]:
-    """Return the HEAD git SHA of the checkout that contains `module_name`,
-    or None if the module is not importable or the checkout isn't a git
-    repo. Best-effort — we never crash a scan on a missing SHA.
-
-    Captures code provenance for aae, mtg, toolproof, hurmoz so every
-    row in a bundle answers "exactly which code produced this?"
-    """
+def _find_package_repo(module_name: str) -> Optional[Path]:
+    """Walk up from a module's __file__ to find its enclosing git repo."""
     try:
         module = __import__(module_name)
     except ImportError:
@@ -432,11 +428,23 @@ def _git_sha_for_package(module_name: str) -> Optional[str]:
     repo_path = Path(module_path).resolve().parent
     for _ in range(6):
         if (repo_path / ".git").exists():
-            break
+            return repo_path
         if repo_path.parent == repo_path:
             return None
         repo_path = repo_path.parent
-    else:
+    return None
+
+
+def _git_sha_for_package(module_name: str) -> Optional[str]:
+    """Return the HEAD git SHA of the checkout that contains `module_name`,
+    or None if the module is not importable or the checkout isn't a git
+    repo. Best-effort — we never crash a scan on a missing SHA.
+
+    Captures code provenance for aae, mtg, toolproof, hurmoz so every
+    row in a bundle answers "exactly which code produced this?"
+    """
+    repo_path = _find_package_repo(module_name)
+    if repo_path is None:
         return None
     try:
         result = subprocess.run(
@@ -449,6 +457,65 @@ def _git_sha_for_package(module_name: str) -> Optional[str]:
         return None
     sha = result.stdout.strip()
     return sha if len(sha) == 40 else None
+
+
+def _git_clean_for_package(module_name: str) -> Optional[bool]:
+    """Is the enclosing git repo of `module_name` clean (no untracked
+    or modified files)? Returns None when git isn't available or the
+    package isn't in a repo — distinct from False, so downstream can
+    tell 'no signal' apart from 'known dirty'."""
+    repo_path = _find_package_repo(module_name)
+    if repo_path is None:
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_path), "status", "--porcelain"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() == ""
+
+
+def _package_version(module_name: str) -> Optional[str]:
+    """Return the installed package version (via importlib.metadata) for
+    `module_name`, or None if the module isn't installed as a
+    distribution. Captures the other half of dependency provenance —
+    not every checkout is a git repo; some are pip-installed and only
+    know their version string."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+    except ImportError:  # pragma: no cover — Python 3.8 fallback
+        return None
+    dist_name = {
+        "arabic_agent_eval": "arabic-agent-eval",
+        "mtg": "mtg-guards",
+        "toolproof": "toolproof",
+    }.get(module_name, module_name)
+    try:
+        return version(dist_name)
+    except PackageNotFoundError:
+        return None
+
+
+def _environment_provenance() -> dict[str, Any]:
+    """Collect Python / OS / dependency-version provenance. Distinct
+    from `code_shas` — those are git HEADs, these are "what was
+    actually installed and running when this scan ran". Both are
+    needed to reproduce a bundle from scratch."""
+    return {
+        "python_version": "{}.{}.{}".format(
+            sys.version_info.major, sys.version_info.minor, sys.version_info.micro,
+        ),
+        "python_implementation": platform.python_implementation(),
+        "platform": platform.platform(),
+        "dependency_versions": {
+            pkg: _package_version(pkg)
+            for pkg in ("arabic_agent_eval", "mtg", "toolproof")
+        },
+    }
 
 
 def _fingerprint_schema_map(tool_schema_map: Optional[dict[str, dict]]) -> str:
@@ -488,6 +555,18 @@ def _code_provenance() -> dict[str, str]:
     absence is still auditable downstream."""
     return {
         pkg: _git_sha_for_package(pkg)
+        for pkg in ("arabic_agent_eval", "mtg", "toolproof")
+    }
+
+
+def _git_clean_provenance() -> dict[str, Optional[bool]]:
+    """Per-package git-clean state. None means git not available /
+    package not in a checkout; False means dirty; True means clean.
+    Paired with code_shas so downstream can tell 'SHA points at
+    committed code' apart from 'SHA is one commit behind a dirty
+    worktree'."""
+    return {
+        pkg: _git_clean_for_package(pkg)
         for pkg in ("arabic_agent_eval", "mtg", "toolproof")
     }
 
@@ -538,6 +617,8 @@ def _new_run_metadata(
     - code_shas — git HEAD for each MTG-stack repo present in the env
     - scanner_version — pinned code version
     """
+    from arabic_agent_eval import DATASET_VERSION
+
     return {
         "run_id": str(uuid.uuid4()),
         "scanned_at": _dt.datetime.now(_dt.timezone.utc).isoformat(
@@ -550,8 +631,11 @@ def _new_run_metadata(
         "schema_map_tools": sorted((tool_schema_map or {}).keys()),
         "schema_map_fingerprint": _fingerprint_schema_map(tool_schema_map),
         "dataset_fingerprint": _fingerprint_benchmark_items(benchmark_result),
+        "dataset_version": DATASET_VERSION,
         "code_shas": _code_provenance(),
-        "scanner_version": "mtg-matrix/0.4",
+        "code_clean": _git_clean_provenance(),
+        "environment": _environment_provenance(),
+        "scanner_version": "mtg-matrix/0.5",
     }
 
 
