@@ -1,0 +1,395 @@
+{
+  "provider": "openrouter",
+  "model": "anthropic/claude-opus-4.7",
+  "model_id": "anthropic/claude-opus-4.7",
+  "provider_base_url": "https://openrouter.ai/api/v1",
+  "dataset": "episodes.jsonl",
+  "n_episodes": 6,
+  "k": 3,
+  "pass_k_rate": 0.3333,
+  "avg_pass_rate": 0.3333,
+  "per_episode": {
+    "ep_travel_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_conditional_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_error_recovery_001": {
+      "outcomes": [
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "passes": 3,
+      "all_passed": true
+    },
+    "ep_abstain_001": {
+      "outcomes": [
+        "abstain",
+        "abstain",
+        "abstain"
+      ],
+      "passes": 3,
+      "all_passed": true
+    },
+    "ep_abstain_002": {
+      "outcomes": [
+        "error",
+        "fail",
+        "error"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_chaining_001": {
+      "outcomes": [
+        "fail",
+        "error",
+        "error"
+      ],
+      "passes": 0,
+      "all_passed": false
+    }
+  },
+  "runs": {
+    "ep_travel_001": [
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "الخميس القادم",
+                "passengers": 1
+              }
+            },
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "دبي",
+                "check_in": "الخميس القادم",
+                "check_out": "الأحد القادم",
+                "guests": 1
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "الخميس القادم",
+                "passengers": 1
+              }
+            },
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "دبي",
+                "check_in": "الخميس القادم",
+                "check_out": "الأحد القادم",
+                "guests": 1
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "الخميس القادم"
+              }
+            },
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "دبي",
+                "check_in": "الخميس القادم",
+                "check_out": "الأحد القادم"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight', 'search_hotels']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_conditional_001": [
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_error_recovery_001": [
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "الجمعة",
+                "check_out": "الأحد"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "2025-01-31",
+                "check_out": "2025-02-02"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "الجمعة القادمة",
+                "check_out": "الأحد القادم"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      }
+    ],
+    "ep_abstain_001": [
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      }
+    ],
+    "ep_abstain_002": [
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "error",
+        "per_turn_calls": [],
+        "reasons": [],
+        "error": "Client error '402 Payment Required' for url 'https://openrouter.ai/api/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402"
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "error",
+        "per_turn_calls": [],
+        "reasons": [],
+        "error": "Client error '402 Payment Required' for url 'https://openrouter.ai/api/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402"
+      }
+    ],
+    "ep_chaining_001": [
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "بيروت",
+                "cuisine": "لبناني"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "error",
+        "per_turn_calls": [],
+        "reasons": [],
+        "error": "Client error '402 Payment Required' for url 'https://openrouter.ai/api/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402"
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "error",
+        "per_turn_calls": [],
+        "reasons": [],
+        "error": "Client error '402 Payment Required' for url 'https://openrouter.ai/api/v1/chat/completions'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/402"
+      }
+    ]
+  },
+  "run_metadata": {
+    "provider": "openrouter",
+    "model": "anthropic/claude-opus-4.7",
+    "provider_base_url": "https://openrouter.ai/api/v1",
+    "dataset": "episodes.jsonl",
+    "k": 3,
+    "timestamp": "2026-04-20T17:56:16.996248+00:00",
+    "source": "openrouter",
+    "tier": "agentic"
+  }
+}

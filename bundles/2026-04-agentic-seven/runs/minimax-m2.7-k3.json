@@ -1,0 +1,474 @@
+{
+  "provider": "openrouter",
+  "model": "minimax/minimax-m2.7",
+  "model_id": "minimax/minimax-m2.7",
+  "provider_base_url": "https://openrouter.ai/api/v1",
+  "dataset": "episodes.jsonl",
+  "n_episodes": 6,
+  "k": 3,
+  "pass_k_rate": 0.3333,
+  "avg_pass_rate": 0.5,
+  "per_episode": {
+    "ep_travel_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_conditional_001": {
+      "outcomes": [
+        "fail",
+        "pass",
+        "fail"
+      ],
+      "passes": 1,
+      "all_passed": false
+    },
+    "ep_error_recovery_001": {
+      "outcomes": [
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "passes": 3,
+      "all_passed": true
+    },
+    "ep_abstain_001": {
+      "outcomes": [
+        "abstain",
+        "abstain",
+        "abstain"
+      ],
+      "passes": 3,
+      "all_passed": true
+    },
+    "ep_abstain_002": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "abstain"
+      ],
+      "passes": 1,
+      "all_passed": false
+    },
+    "ep_chaining_001": {
+      "outcomes": [
+        "fail",
+        "pass",
+        "fail"
+      ],
+      "passes": 1,
+      "all_passed": false
+    }
+  },
+  "runs": {
+    "ep_travel_001": [
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "2025-01-23",
+                "passengers": 1
+              }
+            },
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight', 'book_hotel']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "date": "2025-01-23",
+                "from_city": "الرياض",
+                "passengers": 1,
+                "to_city": "دبي"
+              }
+            },
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight', 'book_hotel']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "date": "2025-01-23",
+                "from_city": "الرياض",
+                "to_city": "دبي"
+              }
+            },
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {
+                "city": "دبي"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {
+                "city": "Dubai"
+              }
+            }
+          ],
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "check_in": "2025-01-23",
+                "check_out": "2025-01-26",
+                "city": "Dubai",
+                "guests": 1
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_flight']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_conditional_001": [
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ],
+          [
+            {
+              "function": "book_table",
+              "arguments": {
+                "date": "today",
+                "guests": 2,
+                "restaurant": "مطعم داخلي",
+                "time": "8:00 PM"
+              }
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_error_recovery_001": [
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "الجمعة",
+                "check_out": "الأحد"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "الجمعة",
+                "check_out": "الأحد"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "2025-01-24",
+                "check_out": "2025-01-26",
+                "guests": 1
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      }
+    ],
+    "ep_abstain_001": [
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      }
+    ],
+    "ep_abstain_002": [
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      }
+    ],
+    "ep_chaining_001": [
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "بيروت",
+                "cuisine": "لبناني"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "بيروت",
+                "cuisine": "لبناني"
+              }
+            }
+          ],
+          [
+            {
+              "function": "book_table",
+              "arguments": {
+                "restaurant": "مطعم الحمرا",
+                "date": "2025-01-20",
+                "time": "20:00",
+                "guests": 2
+              }
+            }
+          ]
+        ],
+        "reasons": [],
+        "error": null
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "بيروت",
+                "cuisine": "لبناني"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      }
+    ]
+  },
+  "run_metadata": {
+    "provider": "openrouter",
+    "model": "minimax/minimax-m2.7",
+    "provider_base_url": "https://openrouter.ai/api/v1",
+    "dataset": "episodes.jsonl",
+    "k": 3,
+    "timestamp": "2026-04-20T17:14:07.367923+00:00",
+    "source": "openrouter",
+    "tier": "agentic"
+  }
+}

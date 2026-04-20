@@ -1,0 +1,301 @@
+{
+  "provider": "openrouter",
+  "model": "google/gemini-2.5-pro",
+  "model_id": "google/gemini-2.5-pro",
+  "provider_base_url": "https://openrouter.ai/api/v1",
+  "dataset": "episodes.jsonl",
+  "n_episodes": 6,
+  "k": 3,
+  "pass_k_rate": 0.1667,
+  "avg_pass_rate": 0.1667,
+  "per_episode": {
+    "ep_travel_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_conditional_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_error_recovery_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_abstain_001": {
+      "outcomes": [
+        "abstain",
+        "abstain",
+        "abstain"
+      ],
+      "passes": 3,
+      "all_passed": true
+    },
+    "ep_abstain_002": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    },
+    "ep_chaining_001": {
+      "outcomes": [
+        "fail",
+        "fail",
+        "fail"
+      ],
+      "passes": 0,
+      "all_passed": false
+    }
+  },
+  "runs": {
+    "ep_travel_001": [
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_flight', 'book_hotel', 'search_flights', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_flight', 'book_hotel', 'search_flights', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_travel_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_flight', 'book_hotel', 'search_flights', 'search_hotels']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_conditional_001": [
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_conditional_001",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_weather",
+              "arguments": {
+                "city": "جدة"
+              }
+            }
+          ]
+        ],
+        "reasons": [
+          "missing required calls: ['book_table']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_error_recovery_001": [
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_hotel', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_hotel', 'search_hotels']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_error_recovery_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_hotel', 'search_hotels']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_abstain_001": [
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_001",
+        "outcome": "abstain",
+        "per_turn_calls": [],
+        "reasons": [
+          "declined to call any tool — abstention expected"
+        ],
+        "error": null
+      }
+    ],
+    "ep_abstain_002": [
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_abstain_002",
+        "outcome": "fail",
+        "per_turn_calls": [
+          [
+            {
+              "function": "get_contacts",
+              "arguments": {}
+            }
+          ]
+        ],
+        "reasons": [
+          "abstention expected but called ['get_contacts']"
+        ],
+        "error": null
+      }
+    ],
+    "ep_chaining_001": [
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_table', 'search_restaurants']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_table', 'search_restaurants']"
+        ],
+        "error": null
+      },
+      {
+        "episode_id": "ep_chaining_001",
+        "outcome": "fail",
+        "per_turn_calls": [],
+        "reasons": [
+          "missing required calls: ['book_table', 'search_restaurants']"
+        ],
+        "error": null
+      }
+    ]
+  },
+  "run_metadata": {
+    "provider": "openrouter",
+    "model": "google/gemini-2.5-pro",
+    "provider_base_url": "https://openrouter.ai/api/v1",
+    "dataset": "episodes.jsonl",
+    "k": 3,
+    "timestamp": "2026-04-20T17:53:22.634627+00:00",
+    "source": "openrouter",
+    "tier": "agentic"
+  }
+}

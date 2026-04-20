@@ -16,3 +16,8 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 runs/
+# BUT: bundles/**/runs/ holds the verbatim run JSONs that each bundle's
+# MANIFEST fingerprints. Those are published artifacts and must be
+# tracked for reproducibility.
+!bundles/**/runs/
+!bundles/**/runs/*
