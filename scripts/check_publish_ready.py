@@ -148,6 +148,21 @@ def check_bundle(
                 f"cannot verify which tool-schema map the scanner used"
             )
 
+        # environment.fingerprint is required on real bundles — it
+        # captures the full transitive install tree, so identical
+        # fingerprints mean identical environments and divergence
+        # points at dep drift. Synthetic bundles waive.
+        if not synthetic:
+            env = md.get("environment") or {}
+            fp = env.get("fingerprint")
+            if not fp:
+                reasons.append(
+                    f"{label}: environment.fingerprint is missing or empty — "
+                    f"published real bundles must stamp a full env fingerprint "
+                    f"so reproducibility is enforceable, not conventional. "
+                    f"Re-scan with mtg-matrix/0.5+ (which writes the field)."
+                )
+
         # code_shas must carry a non-empty git SHA for every REQUIRED
         # package. Optional packages (mtg, toolproof) are permitted to
         # be None if they weren't importable at scan time, but the
@@ -258,6 +273,46 @@ def check_bundle(
     return reasons
 
 
+def _render_override_audit(
+    manifest_overrides: list[str],
+    gate_flags: dict[str, bool],
+) -> list[str]:
+    """Produce audit lines describing how build-time overrides compare
+    to gate-time flags. The goal is one place to read the full
+    relaxation history, so a reviewer knows whether the bundle was
+    weakened at build, at gate, or both."""
+    lines: list[str] = []
+    gate_active = [name for name, active in gate_flags.items() if active]
+
+    if manifest_overrides:
+        lines.append(
+            f"build-time overrides: {', '.join(sorted(manifest_overrides))} "
+            f"(stamped in manifest.invocation.overrides)"
+        )
+    if gate_active:
+        lines.append(
+            f"gate-time overrides: {', '.join(sorted(gate_active))} "
+            f"(passed on the gate command line)"
+        )
+
+    # Flag build-time relaxations the gate isn't seeing. If the bundle
+    # was built with allow_dirty but the gate runs without --allow-dirty,
+    # the gate's own clean-tree check should still fire (it looks at
+    # the manifest's code_clean, which captures the dirty state).
+    build_set = set(manifest_overrides)
+    gate_set = {name for name, active in gate_flags.items() if active}
+    # Normalize names: build-side `allow_dirty` corresponds to gate
+    # flag `allow_dirty`. Same tokens.
+    asymmetric = build_set - gate_set
+    if asymmetric:
+        lines.append(
+            f"build-time overrides present that the gate did NOT receive: "
+            f"{sorted(asymmetric)}. Review whether the bundle's relaxations "
+            f"are still acceptable under the current gate run."
+        )
+    return lines
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Publish gate for MTG result bundles")
     p.add_argument("bundle", type=Path, help="Path to bundle directory")
@@ -309,13 +364,39 @@ def main() -> int:
         synthetic=args.synthetic,
         min_non_diagnostic=args.min_non_diagnostic,
     )
+
+    # Build-vs-gate override audit — surface regardless of pass/fail so
+    # reviewers can see which relaxations were applied at each stage.
+    # Load manifest directly (check_bundle may have failed at integrity
+    # check, but we still want to report whatever the manifest says).
+    audit_lines: list[str] = []
+    try:
+        manifest, _ = load_bundle(args.bundle)
+        mf_overrides = list(manifest.invocation.get("overrides") or [])
+        audit_lines = _render_override_audit(
+            mf_overrides,
+            gate_flags={
+                "allow_diagnostic": args.allow_diagnostic,
+                "allow_no_runs": args.allow_no_runs,
+                "allow_dirty": args.allow_dirty,
+                "synthetic": args.synthetic,
+            },
+        )
+    except BundleError:
+        # Bundle is broken; the main reasons list will carry that.
+        pass
+
     if not reasons:
         print(f"PUBLISH_READY: {args.bundle}")
+        for line in audit_lines:
+            print(f"  note: {line}")
         return 0
 
     print(f"NOT_PUBLISH_READY: {args.bundle}", file=sys.stderr)
     for r in reasons:
         print(f"  - {r}", file=sys.stderr)
+    for line in audit_lines:
+        print(f"  note: {line}", file=sys.stderr)
     return 1
 
 

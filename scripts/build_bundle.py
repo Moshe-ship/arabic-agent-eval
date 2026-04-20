@@ -42,6 +42,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 # Allow running directly from a source checkout.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -203,6 +204,14 @@ def main() -> int:
         help="Allow building when required code_shas are empty (e.g. "
              "running from a pip-installed package, not a git checkout).",
     )
+    p.add_argument(
+        "--synthetic", action="store_true",
+        help="Build a synthetic example bundle. Stamps "
+             "`invocation.synthetic = true` and waives the dirty-tree, "
+             "missing-SHA, and diagnostic-row checks (synthetic bundles "
+             "don't describe real model calls). The publish gate will "
+             "later require its own --synthetic flag to match.",
+    )
     args = p.parse_args()
 
     # Strict default: refuse ambiguous provenance. Each override flag
@@ -224,10 +233,12 @@ def main() -> int:
                 "to acknowledge the diagnostic-only build."
             )
 
-    # Dirty-tree check: build from aae's worktree (where this script lives)
+    # Dirty-tree check: build from aae's worktree (where this script
+    # lives). Synthetic bundles waive this — they don't describe a
+    # real model call, so pinning a clean SHA isn't load-bearing.
     from arabic_agent_eval.matrix import _git_clean_for_package  # reuse helper
     clean = _git_clean_for_package("arabic_agent_eval")
-    if clean is False:
+    if clean is False and not args.synthetic:
         if args.allow_dirty:
             overrides.append("allow_dirty")
         else:
@@ -248,8 +259,10 @@ def main() -> int:
     matrix = build_matrix(benchmarks, tool_schema_map=schema_map)
 
     # Post-build provenance checks, done on the actual matrix rows.
+    # Synthetic bundles waive the diagnostic-rows + missing-SHA checks
+    # (synthetic examples frequently use degenerate inputs).
     diagnostic_rows = [r for r in matrix.rows if r.diagnostic]
-    if diagnostic_rows:
+    if diagnostic_rows and not args.synthetic:
         if args.allow_diagnostic:
             overrides.append("allow_diagnostic")
         else:
@@ -264,7 +277,7 @@ def main() -> int:
         code_shas = (row.run_metadata or {}).get("code_shas") or {}
         if not code_shas.get("arabic_agent_eval"):
             missing_shas.append(f"{row.provider}/{row.model}:arabic_agent_eval")
-    if missing_shas:
+    if missing_shas and not args.synthetic:
         if args.allow_missing_shas:
             overrides.append("allow_missing_shas")
         else:
@@ -288,7 +301,7 @@ def main() -> int:
     run_shas: dict[str, str] = {
         run.name: _sha256_file(run) for run in args.run
     }
-    invocation = {
+    invocation: dict[str, Any] = {
         "generator": "scripts/build_bundle.py",
         "generator_version": BUILD_BUNDLE_VERSION,
         "built_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
@@ -301,6 +314,8 @@ def main() -> int:
         "gate_allow_diagnostic": bool(args.gate_allow_diagnostic),
         "overrides": sorted(overrides),
     }
+    if args.synthetic:
+        invocation["synthetic"] = True
 
     bundle_path = write_bundle(
         matrix,
@@ -327,6 +342,10 @@ def main() -> int:
         gate_args = [sys.executable, str(gate_script), str(bundle_path)]
         if args.gate_allow_diagnostic:
             gate_args.append("--allow-diagnostic")
+        if args.synthetic:
+            gate_args.append("--synthetic")
+        if args.allow_dirty:
+            gate_args.append("--allow-dirty")
         print(f"running publish gate: {' '.join(gate_args)}")
         return subprocess.call(gate_args)
     return 0
