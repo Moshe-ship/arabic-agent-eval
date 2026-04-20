@@ -56,6 +56,7 @@ def check_bundle(
     allow_no_runs: bool = False,
     allow_dirty: bool = False,
     synthetic: bool = False,
+    require_request_config: bool = False,
     min_non_diagnostic: int = 1,
 ) -> list[str]:
     """Return a list of failure reasons. Empty list == publish-ready.
@@ -180,6 +181,23 @@ def check_bundle(
                         f"`setattr(benchmark_result, {required_key!r}, "
                         f"...)` before scanning."
                     )
+
+        # Opt-in requirement: when --require-request-config is passed,
+        # every real row must carry a non-empty
+        # request_config_fingerprint. Useful for provider integrations
+        # that always capture non-default temperature / top_p /
+        # max_tokens — flags missing telemetry before publish.
+        # Synthetic waived.
+        if require_request_config and not synthetic:
+            pp_rc = md.get("provider_provenance") or {}
+            if not pp_rc.get("request_config_fingerprint"):
+                reasons.append(
+                    f"{label}: request_config_fingerprint is missing or "
+                    f"empty but --require-request-config was passed. "
+                    f"Either capture request_config on the BenchmarkResult "
+                    f"(setattr(br, 'request_config', {{...}})) or drop "
+                    f"the flag if this integration doesn't track config."
+                )
 
         # Pair-require request_config_fingerprint ↔ schema_version.
         # Either both are stamped or neither is — a fingerprint without
@@ -420,6 +438,14 @@ def main() -> int:
              "declare `invocation.synthetic = true`. --synthetic and "
              "invocation.synthetic must match — gate rejects mismatches.",
     )
+    p.add_argument(
+        "--require-request-config", action="store_true",
+        help="Opt-in: every real row must carry a non-empty "
+             "request_config_fingerprint. Use when the provider "
+             "integration consistently captures temperature / "
+             "max_tokens / top_p — ensures config telemetry isn't "
+             "silently missing from a published result.",
+    )
     args = p.parse_args()
 
     reasons = check_bundle(
@@ -429,6 +455,7 @@ def main() -> int:
         allow_no_runs=args.allow_no_runs,
         allow_dirty=args.allow_dirty,
         synthetic=args.synthetic,
+        require_request_config=args.require_request_config,
         min_non_diagnostic=args.min_non_diagnostic,
     )
 

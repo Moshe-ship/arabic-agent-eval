@@ -257,6 +257,7 @@ def write_bundle(
     raw_files: Optional[list[Path]] = None,
     raw_index: Optional[dict[str, dict[str, Any]]] = None,
     known_item_ids: Optional[Iterable[str]] = None,
+    known_item_ids_by_row: Optional[dict[str, Iterable[str]]] = None,
     thresholds: Optional[dict[str, float]] = None,
     invocation: Optional[dict[str, Any]] = None,
 ) -> Path:
@@ -290,7 +291,9 @@ def write_bundle(
         written[name] = _sha256_file(path)
 
     _write_text("matrix.json", matrix_json)
-    _write_text("table.md", md_text)
+    # table.md is written below after we've computed row_links — we
+    # need the reverse index to append the "Raw evidence per row"
+    # section. csv and html don't depend on row_links.
     _write_text("table.csv", csv_text)
     if html is not None:
         _write_text("scorecard.html", html)
@@ -342,9 +345,29 @@ def write_bundle(
         _row_key(row.get("provider") or "", row.get("model") or "")
         for row in (matrix_dict.get("rows") or [])
     }
-    known_item_id_set: Optional[set[str]] = (
-        set(known_item_ids) if known_item_ids is not None else None
-    )
+
+    # Item-ID cross-link state. Two levels of check:
+    #   - `known_item_ids_by_row`: per-row set. When a raw_index entry
+    #     has BOTH row_key and item_id, the item_id must be in THAT
+    #     row's set. Catches cross-row attribution errors.
+    #   - `known_item_ids` (or the union of per-row sets): flat set.
+    #     When an entry has item_id without row_key, the item_id must
+    #     be in the flat set. Catches entirely-missing IDs.
+    # Callers who want the stronger row-scoped check pass the per-row
+    # dict; the flat set remains for callers that can't easily produce
+    # per-row IDs.
+    per_row_item_ids: Optional[dict[str, set[str]]] = None
+    if known_item_ids_by_row is not None:
+        per_row_item_ids = {
+            k: set(v) for k, v in known_item_ids_by_row.items()
+        }
+        flat_item_ids: Optional[set[str]] = set().union(
+            *per_row_item_ids.values()
+        ) if per_row_item_ids else set()
+    elif known_item_ids is not None:
+        flat_item_ids = set(known_item_ids)
+    else:
+        flat_item_ids = None
 
     # Normalize raw_index keys to the `raw/<filename>` form that
     # matches `files`. Reject dangling entries AND type-check the
@@ -364,27 +387,11 @@ def write_bundle(
                 )
             _validate_raw_index_entry(key, entry)
 
-            # Cross-link item_id against the caller-supplied ID set.
-            # When caller passes None, we skip — the check is opt-in
-            # at call time since not every caller has the items list
-            # handy (e.g. pre-serialized BenchmarkResult JSONs).
-            entry_item_id = entry.get("item_id")
-            if (
-                known_item_id_set is not None
-                and entry_item_id
-                and entry_item_id not in known_item_id_set
-            ):
-                raise BundleError(
-                    f"raw_index[{key!r}].item_id = {entry_item_id!r} is "
-                    f"not in the provided known_item_ids set. Either "
-                    f"the ID is stale or the raw file belongs to a "
-                    f"different dataset."
-                )
-
             # Cross-link row_key against the matrix. Row-linked raw
             # files get added to the reverse index so reviewers can
             # look up "what raw evidence belongs to this row?" in one
             # lookup.
+            entry_item_id = entry.get("item_id")
             row_key = entry.get("row_key")
             if row_key:
                 if not isinstance(row_key, str):
@@ -400,10 +407,61 @@ def write_bundle(
                     )
                 row_links.setdefault(row_key, []).append(normalized)
 
+            # Cross-link item_id. Two tiers:
+            #   - When row_key is set AND we have per-row ID info,
+            #     require item_id to be in THAT row's set. Catches
+            #     cross-row attribution (raw file tagged for row A
+            #     but the item only existed in row B's run).
+            #   - Else when we have a flat ID set, require item_id
+            #     to be in the union.
+            #   - Else (no caller-supplied ID info): skip.
+            if entry_item_id:
+                if row_key and per_row_item_ids is not None:
+                    row_set = per_row_item_ids.get(row_key, set())
+                    if entry_item_id not in row_set:
+                        raise BundleError(
+                            f"raw_index[{key!r}].item_id = "
+                            f"{entry_item_id!r} is not in the "
+                            f"known_item_ids for row {row_key!r}. "
+                            f"Either the item belongs to a different "
+                            f"row, or the ID is stale."
+                        )
+                elif flat_item_ids is not None and entry_item_id not in flat_item_ids:
+                    raise BundleError(
+                        f"raw_index[{key!r}].item_id = {entry_item_id!r} "
+                        f"is not in the provided known_item_ids set. "
+                        f"Either the ID is stale or the raw file belongs "
+                        f"to a different dataset."
+                    )
+
             raw_index_normalized[normalized] = dict(entry)
 
     # Sort raw_links per row for stability
     row_links = {k: sorted(v) for k, v in sorted(row_links.items())}
+
+    # Append row_links as a Markdown section so reviewers don't have
+    # to open MANIFEST.json to see which raw files belong to which
+    # row. Only rendered when non-empty.
+    if row_links:
+        extra_lines = [
+            "",
+            "## Raw evidence per row",
+            "",
+            "Structured links from each matrix row to its raw evidence "
+            "files (from `manifest.row_links`). Review a row's evidence "
+            "by opening the paths listed here.",
+            "",
+            "| row | raw files |",
+            "|---|---|",
+        ]
+        for row_key, paths in row_links.items():
+            # Backtick each path for readability; comma-separate if
+            # multiple files.
+            rendered_paths = ", ".join(f"`{p}`" for p in paths)
+            extra_lines.append(f"| `{row_key}` | {rendered_paths} |")
+        md_text = md_text.rstrip("\n") + "\n" + "\n".join(extra_lines) + "\n"
+
+    _write_text("table.md", md_text)
 
     manifest = BundleManifest(
         bundle_version=BUNDLE_VERSION,

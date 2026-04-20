@@ -551,6 +551,56 @@ def test_gate_rejects_schema_version_without_fingerprint(tmp_path: Path):
     assert "schema_version" in result.stderr
 
 
+def test_gate_require_request_config_rejects_when_missing(tmp_path: Path):
+    """--require-request-config enforces non-empty
+    request_config_fingerprint on every real row."""
+    bundle = _clean_bundle(tmp_path)
+    result = _run_gate(
+        bundle, "--allow-dirty", "--require-request-config",
+    )
+    assert result.returncode != 0
+    assert "request_config_fingerprint" in result.stderr
+
+
+def test_gate_require_request_config_accepts_when_present(tmp_path: Path):
+    """When request_config is captured via setattr, the requirement
+    passes."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    setattr(br, "provider_base_url", "https://test.example/api/v1")
+    setattr(br, "model_id", "test/model-v1")
+    setattr(br, "request_config", {"temperature": 0.7, "max_tokens": 2048})
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    run_src = tmp_path / "src.json"
+    run_src.write_text("{}", encoding="utf-8")
+    bundle = write_bundle(matrix, tmp_path / "with-config",
+                          run_json_files=[run_src])
+    result = _run_gate(
+        bundle, "--allow-dirty", "--require-request-config",
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_gate_require_request_config_waives_synthetic(tmp_path: Path):
+    """--require-request-config is explicitly waived for synthetic
+    bundles (the requirement applies to real measurements)."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    bundle = write_bundle(
+        matrix, tmp_path / "synth",
+        invocation={"synthetic": True, "generator": "test"},
+    )
+    result = _run_gate(
+        bundle, "--synthetic", "--require-request-config",
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_gate_rejects_missing_model_id(tmp_path: Path):
     """Real bundles must carry model_id on every row."""
     bundle = _clean_bundle(tmp_path)

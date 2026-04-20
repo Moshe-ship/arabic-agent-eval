@@ -570,3 +570,101 @@ def test_row_key_must_be_string(tmp_path: Path):
             raw_files=list(raw_src.iterdir()),
             raw_index={"a.json": {"row_key": 42}},
         )
+
+
+# ---------- row-scoped item_id validation ----------
+
+
+def test_row_scoped_item_id_rejects_cross_row(tmp_path: Path):
+    """When known_item_ids_by_row is supplied and a raw_index entry
+    has both row_key and item_id, the item_id must exist in THAT row's
+    set. Cross-row attribution (item belongs to row B but tagged as
+    row A) must fail."""
+    matrix = _minimal_matrix()  # provider=p, model=m
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="not in the known_item_ids for row"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {
+                "type": "trace",
+                "row_key": "p/m",
+                "item_id": "belongs-to-other-row",
+            }},
+            known_item_ids_by_row={
+                "p/m": ["item-1", "item-2"],
+                "other/row": ["belongs-to-other-row"],
+            },
+        )
+
+
+def test_row_scoped_item_id_accepts_matching(tmp_path: Path):
+    """Item that belongs to its row passes."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {
+            "type": "trace",
+            "row_key": "p/m",
+            "item_id": "item-1",
+        }},
+        known_item_ids_by_row={"p/m": ["item-1", "item-2"]},
+    )
+    manifest, _ = load_bundle(out)
+    assert manifest.raw_index["raw/a.json"]["item_id"] == "item-1"
+
+
+def test_row_scoped_flat_check_fires_without_row_key(tmp_path: Path):
+    """When entry has item_id but no row_key, check falls back to the
+    flat union of all per-row sets."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="not in the provided known_item_ids"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {"type": "trace", "item_id": "unknown"}},
+            known_item_ids_by_row={"p/m": ["item-1"]},
+        )
+
+
+# ---------- row_links rendered in markdown ----------
+
+
+def test_row_links_rendered_in_table_md(tmp_path: Path):
+    """table.md gains a 'Raw evidence per row' section when row_links
+    is non-empty."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    (raw_src / "b.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={
+            "a.json": {"type": "trace", "row_key": "p/m"},
+            "b.json": {"type": "request", "row_key": "p/m"},
+        },
+    )
+    md = (out / "table.md").read_text(encoding="utf-8")
+    assert "Raw evidence per row" in md
+    assert "`p/m`" in md
+    assert "`raw/a.json`" in md
+    assert "`raw/b.json`" in md
+
+
+def test_row_links_section_absent_when_no_links(tmp_path: Path):
+    """No row_links → no extra section in table.md."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")
+    md = (out / "table.md").read_text(encoding="utf-8")
+    assert "Raw evidence per row" not in md
