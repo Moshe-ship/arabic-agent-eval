@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from arabic_agent_eval.dataset import CATEGORIES
+from arabic_agent_eval.dataset import CATEGORIES, effective_categories
 
 
 @dataclass
@@ -65,11 +65,11 @@ class CategoryScore:
 
     @property
     def name_ar(self) -> str:
-        return CATEGORIES.get(self.category, {}).get("name_ar", self.category)
+        return effective_categories().get(self.category, {}).get("name_ar", self.category)
 
     @property
     def weight(self) -> float:
-        return CATEGORIES.get(self.category, {}).get("weight", 0.0)
+        return effective_categories().get(self.category, {}).get("weight", 0.0)
 
     @property
     def avg_function_selection(self) -> float:

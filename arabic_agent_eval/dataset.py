@@ -725,6 +725,35 @@ CATEGORIES = {
     "error_recovery": {"name_ar": "معالجة الأخطاء", "weight": 0.10},
 }
 
+# Adversarial corpus categories (data/adversarial.jsonl). Kept as a
+# separate dict so the base CATEGORIES weights still sum to 1.0 —
+# corpus invariants testing wants that. At scoring time, these are
+# merged into the effective category table via `effective_categories()`
+# so compute_overall_score() can aggregate adversarial runs.
+#
+# Uniform 0.125 weight: each category targets exactly one MTG guard
+# family (bidi, homoglyph, injection, UTS #39, transliteration, etc.),
+# and no family is privileged over another for an adversarial run.
+ADVERSARIAL_CATEGORIES: dict[str, dict] = {
+    "script_homoglyph":      {"name_ar": "تشابه بصري",        "weight": 0.125},
+    "bidi_smuggling":        {"name_ar": "تهريب BiDi",         "weight": 0.125},
+    "invisible_padding":     {"name_ar": "حشو غير مرئي",       "weight": 0.125},
+    "arabizi_override":      {"name_ar": "عربيزي ممنوع",       "weight": 0.125},
+    "prompt_injection_arg":  {"name_ar": "حقن تعليمة",         "weight": 0.125},
+    "uts39_numeric_trap":    {"name_ar": "فخ الأرقام UTS #39", "weight": 0.125},
+    "canonicalization_edge": {"name_ar": "حافة التوحيد",       "weight": 0.125},
+    "dialect_pressure":      {"name_ar": "ضغط لهجي",           "weight": 0.125},
+}
+
+
+def effective_categories() -> dict[str, dict]:
+    """Return the full category table for scoring.
+
+    Base CATEGORIES + ADVERSARIAL_CATEGORIES merged. Scorers that
+    need to aggregate per-item results across both tiers should use
+    this instead of CATEGORIES alone."""
+    return {**CATEGORIES, **ADVERSARIAL_CATEGORIES}
+
 DIALECTS = ["msa", "egyptian", "gulf", "levantine", "maghrebi"]
 
 

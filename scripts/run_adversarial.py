@@ -26,7 +26,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from arabic_agent_eval.dataset import CATEGORIES, Dataset
+from arabic_agent_eval.dataset import Dataset
 from arabic_agent_eval.evaluator import Evaluator
 from arabic_agent_eval.providers import (
     PROVIDER_CONFIGS,
@@ -34,24 +34,6 @@ from arabic_agent_eval.providers import (
     get_default_model,
     make_call_fn,
 )
-
-
-# Adversarial categories aren't in the default CATEGORIES (which was
-# designed for the non-adversarial 51-item corpus). Register them here
-# with uniform weight so compute_overall_score() can aggregate.
-# Each category targets one MTG guard family; all weighted equally.
-_ADVERSARIAL_CATEGORIES = {
-    "script_homoglyph":      {"name_ar": "تشابه بصري",        "weight": 0.125},
-    "bidi_smuggling":        {"name_ar": "تهريب BiDi",         "weight": 0.125},
-    "invisible_padding":     {"name_ar": "حشو غير مرئي",       "weight": 0.125},
-    "arabizi_override":      {"name_ar": "عربيزي ممنوع",       "weight": 0.125},
-    "prompt_injection_arg":  {"name_ar": "حقن تعليمة",         "weight": 0.125},
-    "uts39_numeric_trap":    {"name_ar": "فخ الأرقام UTS #39", "weight": 0.125},
-    "canonicalization_edge": {"name_ar": "حافة التوحيد",       "weight": 0.125},
-    "dialect_pressure":      {"name_ar": "ضغط لهجي",           "weight": 0.125},
-}
-for _k, _v in _ADVERSARIAL_CATEGORIES.items():
-    CATEGORIES.setdefault(_k, _v)
 
 
 DEFAULT_DATASET = REPO_ROOT / "data" / "adversarial.jsonl"
