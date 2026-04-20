@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <rect width="1200" height="675" fill="#ffffff"/>
+
+  <text x="80" y="90" font-size="14" fill="#666666" letter-spacing="2">3 / 4</text>
+
+  <text x="80" y="180" font-size="52" font-weight="500" fill="#1a1a1a">Why this matters</text>
+
+  <line x1="80" y1="220" x2="240" y2="220" stroke="#1a1a1a" stroke-width="1"/>
+
+  <g font-size="22" fill="#1a1a1a">
+    <text x="80" y="300">Arabic evaluation should be reproducible, not anecdotal.</text>
+  </g>
+
+  <g font-size="20" fill="#1a1a1a">
+    <text x="80" y="380">Each bundle ships a MANIFEST with file SHAs, git ref,</text>
+    <text x="80" y="410">dataset fingerprint, and code SHAs for every dependency.</text>
+  </g>
+
+  <g font-size="20" fill="#666666">
+    <text x="80" y="490">&quot;Best model for Arabic tool-calling&quot; is ill-posed without</text>
+    <text x="80" y="520">a surface qualifier — clean, adversarial, and agentic</text>
+    <text x="80" y="550">rankings disagree meaningfully on the same 7 models.</text>
+  </g>
+
+  <text x="80" y="630" font-size="14" fill="#666666">reproducible · dated · provenance-frozen</text>
+</svg>

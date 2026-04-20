@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+  <rect width="1200" height="675" fill="#ffffff"/>
+
+  <text x="80" y="90" font-size="14" fill="#666666" letter-spacing="2">2 / 4</text>
+
+  <text x="80" y="170" font-size="52" font-weight="500" fill="#1a1a1a">What we found</text>
+
+  <line x1="80" y1="210" x2="240" y2="210" stroke="#1a1a1a" stroke-width="1"/>
+
+  <text x="80" y="265" font-size="24" fill="#1a1a1a">No universal winner. Ranking flips by surface.</text>
+
+  <!-- Column headers -->
+  <g font-size="14" fill="#666666" letter-spacing="1">
+    <text x="80"  y="340">MODEL</text>
+    <text x="560" y="340" text-anchor="end">CLEAN</text>
+    <text x="760" y="340" text-anchor="end">ADVERSARIAL</text>
+    <text x="1060" y="340" text-anchor="end">AGENTIC (pass^3)</text>
+  </g>
+
+  <line x1="80" y1="352" x2="1120" y2="352" stroke="#cccccc" stroke-width="1"/>
+
+  <!-- Rows -->
+  <g font-size="19" fill="#1a1a1a">
+    <text x="80"  y="388" font-weight="600">z-ai/glm-5.1</text>
+    <text x="560" y="388" text-anchor="end" font-weight="600">#1  .839</text>
+    <text x="760" y="388" text-anchor="end">#5  .280</text>
+    <text x="1060" y="388" text-anchor="end" font-weight="600">#1  avg .556</text>
+
+    <text x="80"  y="424">qwen/qwen3.6-plus</text>
+    <text x="560" y="424" text-anchor="end">#4  .798</text>
+    <text x="760" y="424" text-anchor="end" font-weight="600">#1  .407</text>
+    <text x="1060" y="424" text-anchor="end">#5  avg .333</text>
+
+    <text x="80"  y="460">anthropic/claude-opus-4.7</text>
+    <text x="560" y="460" text-anchor="end">#3  .803</text>
+    <text x="760" y="460" text-anchor="end">#2  .342</text>
+    <text x="1060" y="460" text-anchor="end">#3  avg .333</text>
+
+    <text x="80"  y="496">minimax/minimax-m2.7</text>
+    <text x="560" y="496" text-anchor="end">#2  .809</text>
+    <text x="760" y="496" text-anchor="end">#3  .324</text>
+    <text x="1060" y="496" text-anchor="end">#2  avg .500</text>
+  </g>
+
+  <g font-size="19" fill="#666666">
+    <text x="80"  y="532">openai/gpt-5.4</text>
+    <text x="560" y="532" text-anchor="end">#7  .543</text>
+    <text x="760" y="532" text-anchor="end">#6  .243</text>
+    <text x="1060" y="532" text-anchor="end">#4  avg .389</text>
+
+    <text x="80"  y="568">google/gemini-2.5-pro</text>
+    <text x="560" y="568" text-anchor="end">#6  .620</text>
+    <text x="760" y="568" text-anchor="end">#7  .130</text>
+    <text x="1060" y="568" text-anchor="end">#7  avg .167</text>
+  </g>
+
+  <text x="80" y="635" font-size="14" fill="#666666">3 bundles, 7 models — full table at RESULTS.md</text>
+</svg>
