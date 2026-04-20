@@ -1,0 +1,8 @@
+provider,model,baseline_score,repaired_score,violation_rate,transliteration_rate,dialect_drift_rate,bidi_violation_rate,homoglyph_rate,repair_rate,total_items,total_calls_scanned,total_cost_usd,median_latency_ms
+openrouter,z-ai/glm-5.1,0.8388,0.8398,0.0,0.0,0.0,0.0,0.0,0.0,51,102,,
+openrouter,minimax/minimax-m2.7,0.8094,0.8048,0.0,0.0,0.0,0.0,0.0,0.0,51,101,,
+openrouter,anthropic/claude-opus-4.7,0.8026,0.7996,0.0,0.0,0.0,0.0,0.0,0.0,51,96,,
+openrouter,qwen/qwen3.6-plus,0.7979,0.8008,0.0,0.0,0.0,0.0,0.0,0.0,51,100,,
+openrouter,moonshotai/kimi-k2.5,0.6337,0.647,0.0,0.0,0.0,0.0,0.0,0.0,51,74,,
+openrouter,google/gemini-2.5-pro,0.6196,0.6181,0.0,0.0,0.0,0.0,0.0,0.0,51,71,,
+openrouter,openai/gpt-5.4,0.5427,0.5547,0.0,0.0,0.0,0.0,0.0,0.0,51,59,,

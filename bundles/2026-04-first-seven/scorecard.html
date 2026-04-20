@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG scorecard — 7 receipts</title>
+<style>
+  :root {
+    --bg: #fff; --fg: #111; --muted: #6b7280; --border: #e5e7eb;
+    --pass: #10b981; --partial: #f59e0b; --fail: #ef4444;
+    --good: #10b981; --warn: #f59e0b; --neutral: #6b7280;
+    --card-bg: #f9fafb; --mono: ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 14px/1.5 var(--sans); color: var(--fg); background: var(--bg);
+    max-width: 1000px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem;
+  }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 1.25rem; margin-bottom: 2rem; }
+  header h1 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 .5rem; }
+  .headline { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .headline .pct { font: 600 48px/1 var(--sans); font-variant-numeric: tabular-nums; }
+  .headline .caption { color: var(--muted); font-size: 13px; }
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    margin: 1.5rem 0 0;
+  }
+  .stat-tile {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: .85rem 1rem; background: var(--card-bg);
+  }
+  .stat-tile .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .stat-tile .value { font: 600 22px/1.2 var(--sans); font-variant-numeric: tabular-nums; margin-top: .2rem; }
+  .stat-tile.pass .value { color: var(--pass); }
+  .stat-tile.partial .value { color: var(--partial); }
+  .stat-tile.fail .value { color: var(--fail); }
+  section { margin-top: 2.5rem; }
+  h2 {
+    font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin: 0 0 .75rem;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  table.stat td { padding: .45rem .4rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.stat td.label { width: 30%; }
+  table.stat td.label code { font: 12px/1 var(--mono); background: #f3f4f6; padding: 3px 6px; border-radius: 3px; color: #111; }
+  table.stat td.num { width: 9%; text-align: right; font-variant-numeric: tabular-nums; }
+  table.stat td.mute { color: var(--muted); font-size: 12px; }
+  table.stat td.barcell { width: 45%; padding-left: 1rem; }
+  .bar { height: 8px; background: #f3f4f6; border-radius: 2px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--neutral); transition: width .2s; }
+  .bar-good .fill { background: var(--good); }
+  .bar-warn .fill { background: var(--warn); }
+  table.tools { width: 100%; margin-top: .5rem; }
+  table.tools th, table.tools td { padding: .5rem .4rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  table.tools th { font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--card-bg); cursor: pointer; user-select: none; }
+  table.tools th.num, table.tools td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.tools td.strong { font-weight: 600; }
+  .pass-color { color: var(--pass); }
+  .partial-color { color: var(--partial); }
+  .fail-color { color: var(--fail); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  footer code { font: 11px/1 var(--mono); }
+</style>
+</head><body>
+<header>
+  <h1>MTG scorecard</h1>
+  <div class="headline">
+    <span class="pct">100.0%</span>
+    <span class="caption">pass rate · 7 / 7 receipts</span>
+  </div>
+  <div class="stats">
+    <div class="stat-tile pass"><div class="label">pass</div><div class="value">7</div></div>
+    <div class="stat-tile partial"><div class="label">partial</div><div class="value">0</div></div>
+    <div class="stat-tile fail"><div class="label">fail</div><div class="value">0</div></div>
+  </div>
+</header>
+
+
+
+
+
+
+<section>
+  <h2>per-tool hot spots</h2>
+  <table class="tools" id="tools">
+    <thead><tr>
+      <th onclick="sortT(0,'str')">tool</th>
+      <th class="num" onclick="sortT(1,'num')">total</th>
+      <th class="num" onclick="sortT(2,'num')">pass</th>
+      <th class="num" onclick="sortT(3,'num')">partial</th>
+      <th class="num" onclick="sortT(4,'num')">fail</th>
+      <th class="num" onclick="sortT(5,'num')">fail %</th>
+    </tr></thead>
+    <tbody><tr><td><code>openrouter/z-ai/glm-5.1</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/minimax/minimax-m2.7</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/anthropic/claude-opus-4.7</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/qwen/qwen3.6-plus</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/moonshotai/kimi-k2.5</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/google/gemini-2.5-pro</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr>
+<tr><td><code>openrouter/openai/gpt-5.4</code></td><td class="num">1</td><td class="num pass-color">1</td><td class="num partial-color">0</td><td class="num fail-color">0</td><td class="num strong">0%</td></tr></tbody>
+  </table>
+</section>
+
+<footer>
+  Generated by <code>mtg.report</code>. Single-page, self-contained. No external assets, no tracking.
+</footer>
+
+<script>
+function sortT(col, kind) {
+  var tbody = document.querySelector('#tools tbody');
+  var rows = Array.from(tbody.rows);
+  var dir = tbody.dataset.sortCol == col && tbody.dataset.sortDir == 'asc' ? 'desc' : 'asc';
+  rows.sort(function(a,b){
+    var av = a.cells[col].textContent.trim();
+    var bv = b.cells[col].textContent.trim();
+    if (kind === 'num') {
+      av = parseFloat(av.replace('%','')) || 0;
+      bv = parseFloat(bv.replace('%','')) || 0;
+      return dir === 'asc' ? av - bv : bv - av;
+    }
+    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(function(r){ tbody.appendChild(r); });
+  tbody.dataset.sortCol = col; tbody.dataset.sortDir = dir;
+}
+</script>
+</body></html>
