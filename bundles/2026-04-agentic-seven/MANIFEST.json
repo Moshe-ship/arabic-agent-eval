@@ -1,0 +1,578 @@
+{
+  "bundle_version": "agentic-1",
+  "created_at": "2026-04-20T17:57:59.358626+00:00",
+  "files": {
+    "runs/glm-5.1-k3.json": "f33316accb8fefff40517c6fe012f4fd075fd81b2f6277d1bb653b87eaf31223",
+    "runs/minimax-m2.7-k3.json": "fd6f8e6e1cbf4bf2fb6a53918e29ea973d508c0a85e09a77d0c6e6a27d28fe42",
+    "runs/claude-opus-4.7-k3.json": "550554f6c50fb6138a2535f344ad479c8b9bde1310b487262544b48b159637a9",
+    "runs/gpt-5.4-k3.json": "6c9351442875deb688584e675f19a949b05021fa37f6d401b70ae2b957e25f47",
+    "runs/qwen3.6-plus-k3.json": "9b1fdd17c844a1793edcf15f7e4ebc0eb0dbf4a939d5c027292e6bfa005a5fb0",
+    "runs/kimi-k2.5-k3.json": "94f11ca6c2fb1c6ca0547f6d20f606aa1f93f0017fa2cb881d3567903ff859ab",
+    "runs/gemini-2.5-pro-k3.json": "c4cca1e459e4ec8eaa491bc3daeaedb2f6403af16bb84d69c19c00527f5efe94",
+    "table.md": "35947f74885f13e92a02335570a443ae366dc624ca5e34932348c8d1455e3cff"
+  },
+  "has_runs": true,
+  "invocation": {
+    "built_at": "2026-04-20T17:57:59.358751+00:00",
+    "generator": "scripts/build_agentic_bundle.py",
+    "generator_version": "agentic_bundle/0.1",
+    "git_branch": "main",
+    "git_ref": "a4b407d9885c7b72991a5ba398afd4548fe1d07d",
+    "run_json_sha256": {
+      "glm-5.1-k3.json": "f33316accb8fefff40517c6fe012f4fd075fd81b2f6277d1bb653b87eaf31223",
+      "minimax-m2.7-k3.json": "fd6f8e6e1cbf4bf2fb6a53918e29ea973d508c0a85e09a77d0c6e6a27d28fe42",
+      "claude-opus-4.7-k3.json": "550554f6c50fb6138a2535f344ad479c8b9bde1310b487262544b48b159637a9",
+      "gpt-5.4-k3.json": "6c9351442875deb688584e675f19a949b05021fa37f6d401b70ae2b957e25f47",
+      "qwen3.6-plus-k3.json": "9b1fdd17c844a1793edcf15f7e4ebc0eb0dbf4a939d5c027292e6bfa005a5fb0",
+      "kimi-k2.5-k3.json": "94f11ca6c2fb1c6ca0547f6d20f606aa1f93f0017fa2cb881d3567903ff859ab",
+      "gemini-2.5-pro-k3.json": "c4cca1e459e4ec8eaa491bc3daeaedb2f6403af16bb84d69c19c00527f5efe94"
+    },
+    "dataset": "episodes.jsonl",
+    "dataset_fingerprint": "e3134aceda497b6d081f6003b1974fa40ca630ba5eb9325eb4d540c676ad027d"
+  },
+  "n_episodes": 6,
+  "n_models": 7,
+  "tier": "agentic",
+  "pass_k": 3,
+  "rows": [
+    {
+      "provider": "openrouter",
+      "model": "z-ai/glm-5.1",
+      "model_id": "z-ai/glm-5.1",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.3333,
+      "avg_pass_rate": 0.5556,
+      "n_episodes": 6,
+      "episodes_passed": 2,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "pass",
+            "fail",
+            "pass"
+          ],
+          "passes": 2,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "pass",
+            "pass",
+            "pass"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "abstain",
+            "fail",
+            "abstain"
+          ],
+          "passes": 2,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "z-ai/glm-5.1",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:49:51.890537+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "minimax/minimax-m2.7",
+      "model_id": "minimax/minimax-m2.7",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.3333,
+      "avg_pass_rate": 0.5,
+      "n_episodes": 6,
+      "episodes_passed": 2,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "pass",
+            "fail"
+          ],
+          "passes": 1,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "pass",
+            "pass",
+            "pass"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "abstain"
+          ],
+          "passes": 1,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "pass",
+            "fail"
+          ],
+          "passes": 1,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "minimax/minimax-m2.7",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:14:07.367923+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "anthropic/claude-opus-4.7",
+      "model_id": "anthropic/claude-opus-4.7",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.3333,
+      "avg_pass_rate": 0.3333,
+      "n_episodes": 6,
+      "episodes_passed": 2,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "pass",
+            "pass",
+            "pass"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "error",
+            "fail",
+            "error"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "error",
+            "error"
+          ],
+          "passes": 0,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "anthropic/claude-opus-4.7",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:56:16.996248+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "openai/gpt-5.4",
+      "model_id": "openai/gpt-5.4",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.1667,
+      "avg_pass_rate": 0.3889,
+      "n_episodes": 6,
+      "episodes_passed": 1,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "pass",
+            "fail"
+          ],
+          "passes": 1,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "fail"
+          ],
+          "passes": 2,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "pass",
+            "fail",
+            "fail"
+          ],
+          "passes": 1,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "openai/gpt-5.4",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:54:41.495352+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "qwen/qwen3.6-plus",
+      "model_id": "qwen/qwen3.6-plus",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.1667,
+      "avg_pass_rate": 0.3333,
+      "n_episodes": 6,
+      "episodes_passed": 1,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "fail",
+            "pass",
+            "pass"
+          ],
+          "passes": 2,
+          "all_passed": false
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "pass",
+            "fail"
+          ],
+          "passes": 1,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "qwen/qwen3.6-plus",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:30:50.797562+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "moonshotai/kimi-k2.5",
+      "model_id": "moonshotai/kimi-k2.5",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.1667,
+      "avg_pass_rate": 0.2778,
+      "n_episodes": 6,
+      "episodes_passed": 1,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "fail"
+          ],
+          "passes": 2,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "moonshotai/kimi-k2.5",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:41:13.766405+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    },
+    {
+      "provider": "openrouter",
+      "model": "google/gemini-2.5-pro",
+      "model_id": "google/gemini-2.5-pro",
+      "provider_base_url": "https://openrouter.ai/api/v1",
+      "k": 3,
+      "pass_k_rate": 0.1667,
+      "avg_pass_rate": 0.1667,
+      "n_episodes": 6,
+      "episodes_passed": 1,
+      "per_episode": {
+        "ep_travel_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_conditional_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_error_recovery_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_abstain_001": {
+          "outcomes": [
+            "abstain",
+            "abstain",
+            "abstain"
+          ],
+          "passes": 3,
+          "all_passed": true
+        },
+        "ep_abstain_002": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        },
+        "ep_chaining_001": {
+          "outcomes": [
+            "fail",
+            "fail",
+            "fail"
+          ],
+          "passes": 0,
+          "all_passed": false
+        }
+      },
+      "run_metadata": {
+        "provider": "openrouter",
+        "model": "google/gemini-2.5-pro",
+        "provider_base_url": "https://openrouter.ai/api/v1",
+        "dataset": "episodes.jsonl",
+        "k": 3,
+        "timestamp": "2026-04-20T17:53:22.634627+00:00",
+        "source": "openrouter",
+        "tier": "agentic"
+      }
+    }
+  ]
+}
