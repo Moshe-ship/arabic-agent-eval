@@ -10,19 +10,41 @@
         "properties": {
           "from_city": {
             "type": "string",
-            "description": "Departure city"
+            "description": "Departure city",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "to_city": {
             "type": "string",
-            "description": "Arrival city"
+            "description": "Arrival city",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "date": {
             "type": "string",
-            "description": "Travel date"
+            "description": "Travel date",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "passengers": {
             "type": "integer",
-            "description": "Number of passengers"
+            "description": "Number of passengers",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -42,19 +64,40 @@
         "properties": {
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "check_in": {
             "type": "string",
-            "description": "Check-in date"
+            "description": "Check-in date",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "check_out": {
             "type": "string",
-            "description": "Check-out date"
+            "description": "Check-out date",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "guests": {
             "type": "integer",
-            "description": "Number of guests"
+            "description": "Number of guests",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -74,7 +117,13 @@
         "properties": {
           "recipient": {
             "type": "string",
-            "description": "Recipient name or number"
+            "description": "Recipient name or number",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "platform": {
             "type": "string",
@@ -84,11 +133,22 @@
               "sms",
               "telegram",
               "email"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "message": {
             "type": "string",
-            "description": "Message content"
+            "description": "Message content",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -108,7 +168,13 @@
         "properties": {
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -126,11 +192,23 @@
         "properties": {
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "cuisine": {
             "type": "string",
-            "description": "Type of cuisine"
+            "description": "Type of cuisine",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "budget": {
             "type": "string",
@@ -139,7 +217,12 @@
               "cheap",
               "moderate",
               "expensive"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -157,19 +240,40 @@
         "properties": {
           "restaurant": {
             "type": "string",
-            "description": "Restaurant name"
+            "description": "Restaurant name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "date": {
             "type": "string",
-            "description": "Reservation date"
+            "description": "Reservation date",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "time": {
             "type": "string",
-            "description": "Reservation time"
+            "description": "Reservation time",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "guests": {
             "type": "integer",
-            "description": "Number of guests"
+            "description": "Number of guests",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -190,11 +294,22 @@
         "properties": {
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "date": {
             "type": "string",
-            "description": "Date (optional, defaults to today)"
+            "description": "Date (optional, defaults to today)",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -212,15 +327,30 @@
         "properties": {
           "amount": {
             "type": "number",
-            "description": "Amount to convert"
+            "description": "Amount to convert",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "from_currency": {
             "type": "string",
-            "description": "Source currency code"
+            "description": "Source currency code",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "to_currency": {
             "type": "string",
-            "description": "Target currency code"
+            "description": "Target currency code",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -240,15 +370,31 @@
         "properties": {
           "text": {
             "type": "string",
-            "description": "Text to translate"
+            "description": "Text to translate",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "from_lang": {
             "type": "string",
-            "description": "Source language"
+            "description": "Source language",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "to_lang": {
             "type": "string",
-            "description": "Target language"
+            "description": "Target language",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -275,11 +421,22 @@
               "technology",
               "business",
               "entertainment"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "country": {
             "type": "string",
-            "description": "Country code"
+            "description": "Country code",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -297,11 +454,22 @@
         "properties": {
           "message": {
             "type": "string",
-            "description": "Reminder message"
+            "description": "Reminder message",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "datetime": {
             "type": "string",
-            "description": "When to remind"
+            "description": "When to remind",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -320,11 +488,21 @@
         "properties": {
           "amount": {
             "type": "number",
-            "description": "Total wealth amount"
+            "description": "Total wealth amount",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "currency": {
             "type": "string",
-            "description": "Currency code"
+            "description": "Currency code",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "type": {
             "type": "string",
@@ -335,7 +513,12 @@
               "silver",
               "stocks",
               "business"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -354,11 +537,22 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "Search query"
+            "description": "Search query",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "surah": {
             "type": "integer",
-            "description": "Surah number (optional)"
+            "description": "Surah number (optional)",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -376,7 +570,12 @@
         "properties": {
           "symbol": {
             "type": "string",
-            "description": "Stock ticker symbol"
+            "description": "Stock ticker symbol",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "market": {
             "type": "string",
@@ -387,7 +586,13 @@
               "dfm",
               "nasdaq",
               "nyse"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -406,15 +611,33 @@
         "properties": {
           "restaurant": {
             "type": "string",
-            "description": "Restaurant name"
+            "description": "Restaurant name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "items": {
             "type": "string",
-            "description": "Food items to order"
+            "description": "Food items to order",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "address": {
             "type": "string",
-            "description": "Delivery address"
+            "description": "Delivery address",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -434,11 +657,23 @@
         "properties": {
           "from_location": {
             "type": "string",
-            "description": "Starting point"
+            "description": "Starting point",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "to_location": {
             "type": "string",
-            "description": "Destination"
+            "description": "Destination",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -457,23 +692,51 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Meeting title"
+            "description": "Meeting title",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "date": {
             "type": "string",
-            "description": "Meeting date"
+            "description": "Meeting date",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "time": {
             "type": "string",
-            "description": "Meeting time"
+            "description": "Meeting time",
+            "x-mtg": {
+              "slot_type": "temporal",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "participants": {
             "type": "string",
-            "description": "Participant names"
+            "description": "Participant names",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "location": {
             "type": "string",
-            "description": "Meeting location or link"
+            "description": "Meeting location or link",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -494,15 +757,31 @@
         "properties": {
           "recipient": {
             "type": "string",
-            "description": "Recipient name"
+            "description": "Recipient name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "amount": {
             "type": "number",
-            "description": "Amount to send"
+            "description": "Amount to send",
+            "x-mtg": {
+              "slot_type": "numeric",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "currency": {
             "type": "string",
-            "description": "Currency code"
+            "description": "Currency code",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -522,7 +801,13 @@
         "properties": {
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -540,11 +825,21 @@
         "properties": {
           "application_id": {
             "type": "string",
-            "description": "Application ID"
+            "description": "Application ID",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           },
           "passport_number": {
             "type": "string",
-            "description": "Passport number"
+            "description": "Passport number",
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -563,11 +858,23 @@
         "properties": {
           "pickup": {
             "type": "string",
-            "description": "Pickup location"
+            "description": "Pickup location",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "destination": {
             "type": "string",
-            "description": "Destination"
+            "description": "Destination",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "type": {
             "type": "string",
@@ -575,7 +882,12 @@
             "enum": [
               "ride",
               "rental"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
@@ -595,11 +907,23 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "Job title or keyword"
+            "description": "Job title or keyword",
+            "x-mtg": {
+              "slot_type": "free_text",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "city": {
             "type": "string",
-            "description": "City name"
+            "description": "City name",
+            "x-mtg": {
+              "slot_type": "named_entity",
+              "script": "mixed",
+              "transliteration_allowed": true,
+              "mode": "advisory"
+            }
           },
           "type": {
             "type": "string",
@@ -609,7 +933,12 @@
               "part-time",
               "remote",
               "contract"
-            ]
+            ],
+            "x-mtg": {
+              "slot_type": "identifier",
+              "script": "any",
+              "mode": "advisory"
+            }
           }
         },
         "required": [
