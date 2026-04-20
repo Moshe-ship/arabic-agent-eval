@@ -601,6 +601,38 @@ def _git_clean_provenance() -> dict[str, Optional[bool]]:
     }
 
 
+def _fingerprint_request_config(config: Optional[dict]) -> Optional[str]:
+    """Stable sha256 over a request-config dict (temperature, max_tokens,
+    top_p, etc.). Callers set `request_config` on their BenchmarkResult
+    so the matrix can stamp the fingerprint per row. Same model name
+    with different config produces different fingerprints — makes
+    backend drift visible.
+
+    Returns None when the config is empty (distinguishes "no config
+    captured" from "hash of empty dict")."""
+    if not config:
+        return None
+    canonical = json.dumps(
+        config, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def _provider_provenance(benchmark_result: "BenchmarkResult") -> dict[str, Any]:
+    """Collect provider / request-side provenance. Opt-in: callers set
+    attributes on BenchmarkResult via setattr (matching the cost_usd /
+    latency_ms pattern). Missing attributes → None entries, so the
+    presence or absence of each is always auditable."""
+    base_url = getattr(benchmark_result, "provider_base_url", None)
+    model_id = getattr(benchmark_result, "model_id", None)
+    request_config = getattr(benchmark_result, "request_config", None)
+    return {
+        "provider_base_url": base_url,
+        "model_id": model_id,
+        "request_config_fingerprint": _fingerprint_request_config(request_config),
+    }
+
+
 def _fingerprint_benchmark_items(benchmark_result: "BenchmarkResult") -> str:
     """Stable sha256 over the item IDs + categories + dialects + expected
     calls that this benchmark run scored. Captures the dataset slice
@@ -656,6 +688,7 @@ def _new_run_metadata(
         ),
         "provider": benchmark_result.provider,
         "model": benchmark_result.model,
+        "provider_provenance": _provider_provenance(benchmark_result),
         "n_items": benchmark_result.total_items,
         "n_errors": len(benchmark_result.errors),
         "schema_map_tools": sorted((tool_schema_map or {}).keys()),
@@ -665,7 +698,7 @@ def _new_run_metadata(
         "code_shas": _code_provenance(),
         "code_clean": _git_clean_provenance(),
         "environment": _environment_provenance(),
-        "scanner_version": "mtg-matrix/0.5",
+        "scanner_version": "mtg-matrix/0.6",
     }
 
 

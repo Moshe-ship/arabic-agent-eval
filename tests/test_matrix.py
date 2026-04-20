@@ -762,6 +762,50 @@ def test_run_metadata_carries_code_clean_flags():
         assert v is None or isinstance(v, bool)
 
 
+def test_run_metadata_carries_provider_provenance():
+    """Opt-in provider/request attributes on BenchmarkResult flow into
+    run_metadata.provider_provenance."""
+    br = BenchmarkResult(
+        provider="openrouter", model="hermes-70b",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    setattr(br, "provider_base_url", "https://openrouter.ai/api/v1")
+    setattr(br, "model_id", "nousresearch/hermes-4-70b")
+    setattr(br, "request_config", {"temperature": 0.7, "max_tokens": 2048})
+    row = scan_with_mtg(br)
+    pp = row.run_metadata.get("provider_provenance") or {}
+    assert pp.get("provider_base_url") == "https://openrouter.ai/api/v1"
+    assert pp.get("model_id") == "nousresearch/hermes-4-70b"
+    assert pp.get("request_config_fingerprint")
+    assert len(pp["request_config_fingerprint"]) == 64
+
+
+def test_request_config_fingerprint_changes_with_content():
+    """Different config values → different fingerprints."""
+    from arabic_agent_eval.matrix import _fingerprint_request_config
+
+    fp1 = _fingerprint_request_config({"temperature": 0.7})
+    fp2 = _fingerprint_request_config({"temperature": 0.9})
+    fp3 = _fingerprint_request_config({"temperature": 0.7})
+    assert fp1 != fp2
+    assert fp1 == fp3
+    assert _fingerprint_request_config(None) is None
+    assert _fingerprint_request_config({}) is None
+
+
+def test_provider_provenance_absent_when_attrs_missing():
+    """BenchmarkResult without the opt-in setattr gets None entries."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    row = scan_with_mtg(br)
+    pp = row.run_metadata.get("provider_provenance") or {}
+    assert pp.get("provider_base_url") is None
+    assert pp.get("model_id") is None
+    assert pp.get("request_config_fingerprint") is None
+
+
 def test_to_dict_surfaces_ci_and_heuristic_rate():
     br = BenchmarkResult(
         provider="t", model="m",

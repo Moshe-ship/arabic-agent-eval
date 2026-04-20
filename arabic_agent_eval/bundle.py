@@ -170,6 +170,7 @@ def write_bundle(
     *,
     html: Optional[str] = None,
     run_json_files: Optional[list[Path]] = None,
+    raw_files: Optional[list[Path]] = None,
     thresholds: Optional[dict[str, float]] = None,
     invocation: Optional[dict[str, Any]] = None,
 ) -> Path:
@@ -217,6 +218,22 @@ def write_bundle(
             if not src.exists():
                 raise BundleError(f"run JSON not found: {src}")
             dst_name = f"runs/{src.name}"
+            dst = out_dir / dst_name
+            dst.write_bytes(src.read_bytes())
+            written[dst_name] = _sha256_file(dst)
+
+    # Raw evidence copies — redacted provider outputs, trace excerpts,
+    # or anything else the caller wants to ship alongside runs/. Like
+    # runs/, these get sha256'd and covered by manifest integrity. The
+    # gate treats raw/ as purely informational — never required, but
+    # the sha256 coverage makes silent mutation detectable.
+    if raw_files:
+        raw_dir = out_dir / "raw"
+        raw_dir.mkdir(exist_ok=True)
+        for src in raw_files:
+            if not src.exists():
+                raise BundleError(f"raw file not found: {src}")
+            dst_name = f"raw/{src.name}"
             dst = out_dir / dst_name
             dst.write_bytes(src.read_bytes())
             written[dst_name] = _sha256_file(dst)

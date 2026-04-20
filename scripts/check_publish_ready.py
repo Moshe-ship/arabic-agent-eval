@@ -270,6 +270,37 @@ def check_bundle(
             f"result — re-scan with an annotated tool-schema map"
         )
 
+    # Override-asymmetry enforcement for real bundles. If the bundle
+    # was BUILT with a weakening override (allow_dirty / allow_diagnostic
+    # / allow_no_schemas / allow_missing_shas) but the gate was invoked
+    # WITHOUT the matching flag, the publisher is effectively hiding
+    # the weakening — the gate's checks pass because they can't see a
+    # problem the data already absorbed, not because the bundle is
+    # clean. Require the gate to acknowledge every build-time
+    # relaxation explicitly, so publishing a real bundle means someone
+    # consciously opted into every weakening in play.
+    #
+    # Synthetic bundles waive: synthetic invocation.overrides is
+    # informational; the --synthetic flag itself already acknowledges
+    # the waiver.
+    if not synthetic:
+        build_overrides = set(manifest.invocation.get("overrides") or [])
+        gate_active = {
+            "allow_diagnostic": allow_diagnostic,
+            "allow_no_runs": allow_no_runs,
+            "allow_dirty": allow_dirty,
+        }
+        gate_set = {name for name, on in gate_active.items() if on}
+        unreceived = build_overrides - gate_set
+        if unreceived:
+            reasons.append(
+                f"build-time overrides were applied that the gate did "
+                f"NOT receive: {sorted(unreceived)}. Re-run the gate with "
+                f"the matching flag(s) or strip the override from the "
+                f"bundle's invocation. Publishing a real bundle requires "
+                f"acknowledging every weakening that was in play."
+            )
+
     return reasons
 
 

@@ -397,6 +397,54 @@ def test_gate_rejects_synthetic_flag_without_manifest_marker(tmp_path: Path):
     assert "synthetic" in result.stderr
 
 
+def test_gate_rejects_real_bundle_with_unreceived_build_override(tmp_path: Path):
+    """If the bundle was BUILT with allow_dirty but the gate runs
+    WITHOUT --allow-dirty, that's a silent-weakening attempt — gate
+    rejects so the publisher has to re-pass the override explicitly.
+    Synthetic bundles waive."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    run_src = tmp_path / "src.json"
+    run_src.write_text("{}", encoding="utf-8")
+    bundle = write_bundle(
+        matrix, tmp_path / "real", run_json_files=[run_src],
+        # Simulate a bundle built under allow_dirty without the gate
+        # seeing the flag. invocation.overrides is what build_bundle
+        # records.
+        invocation={"generator": "test", "overrides": ["allow_dirty"]},
+    )
+    r1 = _run_gate(bundle)
+    assert r1.returncode != 0
+    assert "allow_dirty" in r1.stderr
+    assert "did NOT receive" in r1.stderr
+    # With --allow-dirty: gate acknowledges → passes
+    r2 = _run_gate(bundle, "--allow-dirty")
+    assert r2.returncode == 0, r2.stderr
+
+
+def test_gate_synthetic_waives_build_override_asymmetry(tmp_path: Path):
+    """Synthetic bundles declare their relaxations via synthetic=true;
+    no additional build-override gate check is needed."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    bundle = write_bundle(
+        matrix, tmp_path / "synth",
+        invocation={
+            "synthetic": True,
+            "overrides": ["allow_dirty", "allow_diagnostic"],  # both present
+        },
+    )
+    # --synthetic alone must pass, without needing --allow-dirty etc.
+    result = _run_gate(bundle, "--synthetic")
+    assert result.returncode == 0, result.stderr
+
+
 def test_gate_rejects_dirty_via_manifest_edit(tmp_path: Path):
     """Force code_clean.aae=false and confirm the gate rejects."""
     bundle = _clean_bundle(tmp_path)

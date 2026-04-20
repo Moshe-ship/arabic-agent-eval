@@ -240,3 +240,62 @@ def test_invocation_survives_round_trip_and_integrity(tmp_path: Path):
     )
     manifest, _ = load_bundle(out)  # must not raise
     assert manifest.invocation["generator"] == "test"
+
+
+# ---------- raw evidence ----------
+
+
+def test_raw_files_copied_into_bundle(tmp_path: Path):
+    """write_bundle(raw_files=...) copies each file under bundle/raw/
+    and registers it in the manifest."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "request-1.json").write_text("{\"redacted\": true}", encoding="utf-8")
+    (raw_src / "trace.log").write_text("sample trace", encoding="utf-8")
+
+    out = write_bundle(
+        matrix, tmp_path / "bundle", raw_files=list(raw_src.iterdir()),
+    )
+    assert (out / "raw" / "request-1.json").exists()
+    assert (out / "raw" / "trace.log").exists()
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    raw_entries = sorted(k for k in manifest.files if k.startswith("raw/"))
+    assert raw_entries == ["raw/request-1.json", "raw/trace.log"]
+
+
+def test_raw_files_covered_by_manifest_integrity(tmp_path: Path):
+    """Tampering a raw file after publish must break load_bundle."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "note.txt").write_text("original", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle", raw_files=list(raw_src.iterdir()),
+    )
+    (out / "raw" / "note.txt").write_text("tampered", encoding="utf-8")
+    with pytest.raises(BundleError, match="sha256 mismatch"):
+        load_bundle(out)
+
+
+def test_raw_files_optional_and_default_absent(tmp_path: Path):
+    """No raw_files → no raw/ directory + no raw/* entries in manifest."""
+    matrix = _minimal_matrix()
+    out = write_bundle(matrix, tmp_path / "bundle")
+    assert not (out / "raw").exists()
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert not any(k.startswith("raw/") for k in manifest.files)
+
+
+def test_raw_files_reject_missing_source(tmp_path: Path):
+    """Non-existent source paths fail loud."""
+    matrix = _minimal_matrix()
+    missing = tmp_path / "nope.txt"
+    with pytest.raises(BundleError, match="raw file not found"):
+        write_bundle(
+            matrix, tmp_path / "bundle", raw_files=[missing],
+        )

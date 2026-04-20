@@ -38,7 +38,7 @@
           "toolproof": true
         },
         "code_shas": {
-          "arabic_agent_eval": "f2c31e7f516796b3b2ad63de245ef39b554c4ad4",
+          "arabic_agent_eval": "556783ade055abd12cd4040624f790428455e755",
           "mtg": "1223861d25664ffcd0e34b34efc8b381e054b996",
           "toolproof": "cf260d39ab233f715a0793f1a38e715a0df98eb4"
         },
@@ -59,9 +59,14 @@
         "n_errors": 0,
         "n_items": 5,
         "provider": "example",
-        "run_id": "876b451a-3174-4c74-9969-9fe72f749d56",
-        "scanned_at": "2026-04-20T01:48:57+00:00",
-        "scanner_version": "mtg-matrix/0.5",
+        "provider_provenance": {
+          "model_id": null,
+          "provider_base_url": null,
+          "request_config_fingerprint": null
+        },
+        "run_id": "0baf9bf1-469a-49ba-9237-9fcfc47d2fc4",
+        "scanned_at": "2026-04-20T02:02:41+00:00",
+        "scanner_version": "mtg-matrix/0.6",
         "schema_map_fingerprint": "dc25f3e8e793048deeeb47e7c3785501e5faf49fc37bcd5b715e90a2fcd3bf8a",
         "schema_map_tools": [
           "arabic_grammar_correct",

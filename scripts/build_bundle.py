@@ -212,6 +212,14 @@ def main() -> int:
              "don't describe real model calls). The publish gate will "
              "later require its own --synthetic flag to match.",
     )
+    p.add_argument(
+        "--raw", type=Path, default=None,
+        help="Path to a directory of raw evidence files (redacted "
+             "provider outputs, trace excerpts, etc.). Every regular "
+             "file in the directory is copied into bundle/raw/ and "
+             "covered by manifest sha256 integrity. Purely additive — "
+             "the gate never requires raw files.",
+    )
     args = p.parse_args()
 
     # Strict default: refuse ambiguous provenance. Each override flag
@@ -317,11 +325,24 @@ def main() -> int:
     if args.synthetic:
         invocation["synthetic"] = True
 
+    raw_files: list[Path] = []
+    if args.raw is not None:
+        if not args.raw.is_dir():
+            print(f"error: --raw path is not a directory: {args.raw}",
+                   file=sys.stderr)
+            return 2
+        raw_files = sorted(
+            p for p in args.raw.iterdir()
+            if p.is_file() and not p.name.startswith(".")
+        )
+        print(f"attaching {len(raw_files)} raw evidence file(s) from {args.raw}")
+
     bundle_path = write_bundle(
         matrix,
         args.out,
         html=html,
         run_json_files=list(args.run),
+        raw_files=raw_files or None,
         invocation=invocation,
     )
     print(f"wrote bundle → {bundle_path}")
