@@ -1,12 +1,22 @@
 {
   "bundle_version": "1",
-  "created_at": "2026-04-19T23:46:39+00:00",
+  "created_at": "2026-04-20T01:14:10+00:00",
   "files": {
-    "matrix.json": "c8056553f289c99c4bf2a7604bd02f8ed0fc08a3763dab7241706df016b1c817",
+    "matrix.json": "9ca14e183647e821e67add3a800380e32ca0a140f4c1d6f376a84b51df55df33",
     "table.csv": "80ff9458945842ca79424527c1fed4a74f990e7d0b4e75fa5125caf5515625e7",
-    "table.md": "7c114cf0cdca8bc04afd15fa59aba3716ede8910fa7285933247968b63ce7d0b"
+    "table.md": "14e13e1f328ae18c6b2c3d49e6dc8ece541256b752593d8030f8739012440749"
   },
   "has_runs": false,
+  "invocation": {
+    "built_at": "2026-04-20T01:14:10+00:00",
+    "generator": "scripts/gen_example_bundle.py",
+    "generator_version": "gen_example_bundle/0.2",
+    "git_branch": "main",
+    "git_ref": "cc060fd394d4203c0883a8ad3868746a56888b75",
+    "note": "Fabricated bundle for format demonstration — NOT a model result.",
+    "schema_map_source": "../hurmoz/tool-schemas",
+    "synthetic": true
+  },
   "row_summaries": [
     {
       "diagnostic": false,
@@ -17,8 +27,8 @@
       "model": "synthetic-v1",
       "n_items": 5,
       "provider": "example",
-      "run_id": "87b62e0f-597e-4457-841a-6eee3f73b34e",
-      "scanned_at": "2026-04-19T23:46:39+00:00",
+      "run_id": "3e0d8ddb-35a5-422a-aa98-f19c230cc480",
+      "scanned_at": "2026-04-20T01:14:10+00:00",
       "scanner_version": "mtg-matrix/0.4",
       "schema_bound_arg_count": 12,
       "schema_bound_rate": 1.0,

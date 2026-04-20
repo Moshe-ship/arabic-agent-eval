@@ -21,7 +21,9 @@ rewritten.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -136,6 +138,23 @@ def build_synthetic_benchmark() -> BenchmarkResult:
     )
 
 
+def _git_ref() -> tuple[str, str]:
+    """Return (ref, branch) for the current checkout, or ("", "") if
+    git isn't available."""
+    try:
+        ref = subprocess.run(
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        ).stdout.strip()
+        branch = subprocess.run(
+            ["git", "-C", str(_REPO_ROOT), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5, check=False,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "", ""
+    return ref, branch
+
+
 def main() -> int:
     out_dir = _REPO_ROOT / "examples" / "synthetic_bundle"
     schemas = _load_hurmoz_schemas()
@@ -149,7 +168,22 @@ def main() -> int:
     readme = out_dir / "README.md"
     readme_content = readme.read_text(encoding="utf-8") if readme.exists() else None
 
-    bundle = write_bundle(matrix, out_dir)
+    # Synthetic invocation so the committed example shows the shape.
+    # Clearly labeled as synthetic — no run_json_sha256 because there
+    # are no real runs.
+    git_ref, git_branch = _git_ref()
+    invocation = {
+        "generator": "scripts/gen_example_bundle.py",
+        "generator_version": "gen_example_bundle/0.2",
+        "built_at": _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
+        "git_ref": git_ref,
+        "git_branch": git_branch,
+        "schema_map_source": "../hurmoz/tool-schemas",
+        "synthetic": True,
+        "note": "Fabricated bundle for format demonstration — NOT a model result.",
+    }
+
+    bundle = write_bundle(matrix, out_dir, invocation=invocation)
     if readme_content is not None:
         readme.write_text(readme_content, encoding="utf-8")
 
