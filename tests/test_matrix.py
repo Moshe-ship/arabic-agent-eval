@@ -899,6 +899,75 @@ def test_provider_provenance_no_input_field_when_already_canonical():
     assert "model_id_input" not in pp
 
 
+# ---------- normalize_provider_base_url edge cases ----------
+
+
+def test_normalize_url_preserves_port():
+    """Ports are part of the authority — lowercase host, preserve port."""
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("https://API.Example.com:8080/v1") == (
+        "https://api.example.com:8080/v1"
+    )
+
+
+def test_normalize_url_preserves_query_string():
+    """Query strings aren't canonicalized — order can be significant
+    for some APIs."""
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    result = normalize_provider_base_url("https://api.example.com/v1?version=2024-01")
+    assert "?version=2024-01" in result
+
+
+def test_normalize_url_preserves_path_case():
+    """Paths are case-sensitive per RFC 3986 — only scheme and host
+    are lowercased."""
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("https://api.Example.com/API/V1") == (
+        "https://api.example.com/API/V1"
+    )
+
+
+def test_normalize_url_handles_multiple_trailing_slashes():
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("https://api.example.com/v1///") == (
+        "https://api.example.com/v1"
+    )
+
+
+def test_normalize_url_handles_schemeless_input():
+    """No scheme → still normalizes (lowercases, strips trailing slash)."""
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("api.example.com/v1/") == (
+        "api.example.com/v1"
+    )
+
+
+def test_normalize_url_is_idempotent():
+    """Applying normalization twice produces the same result."""
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    inputs = [
+        "https://API.Example.COM/v1/",
+        "https://api.test.com/",
+        "HTTPS://cache.openai.com/v1?version=2024",
+        "api.example.com",
+    ]
+    for u in inputs:
+        once = normalize_provider_base_url(u)
+        twice = normalize_provider_base_url(once)
+        assert once == twice, f"non-idempotent on {u!r}: {once!r} → {twice!r}"
+
+
+def test_normalize_model_id_idempotent_on_edge_cases():
+    from arabic_agent_eval.matrix import normalize_model_id
+    # Mixed case + internal whitespace
+    first = normalize_model_id("Nous\tResearch / Hermes-4-70B")
+    second = normalize_model_id(first)
+    assert first == second
+    # Unicode: stays preserved (lowercase is a no-op for Arabic)
+    arabic = normalize_model_id("arabic/نموذج")
+    assert arabic == "arabic/نموذج"
+
+
 def test_to_dict_surfaces_ci_and_heuristic_rate():
     br = BenchmarkResult(
         provider="t", model="m",

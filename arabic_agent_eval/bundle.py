@@ -33,7 +33,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 from arabic_agent_eval.matrix import (
     ResultMatrix,
@@ -94,6 +94,7 @@ def _validate_raw_index_entry(key: str, entry: Any) -> None:
         "source": str,
         "redaction_note": str,
         "item_id": str,
+        "row_key": str,
         "redacted": bool,
     }
     for field_name, expected_type in type_expectations.items():
@@ -113,6 +114,13 @@ def _validate_raw_index_entry(key: str, entry: Any) -> None:
                 f"{expected_type.__name__}, got {type(value).__name__} "
                 f"({value!r})"
             )
+
+
+def _row_key(provider: str, model: str) -> str:
+    """Canonical row identifier used in raw_index entries and the
+    manifest.row_links reverse index. Simple "provider/model" format;
+    lookups match `MatrixRow.provider` + `MatrixRow.model`."""
+    return f"{provider}/{model}"
 
 
 @dataclass
@@ -151,6 +159,13 @@ class BundleManifest:
     # Schema is minimal on purpose — extra keys permitted but preferred
     # ones keep reviews uniform.
     raw_index: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Reverse index from `provider/model` → list of `raw/<filename>`
+    # paths belonging to that row. Derived at write time from any
+    # raw_index entry that carries `row_key`. Non-authoritative —
+    # `raw_index` is the source of truth; `row_links` is the lookup
+    # table reviewers use to answer "what raw evidence belongs to this
+    # row?" without scanning every descriptor.
+    row_links: dict[str, list[str]] = field(default_factory=dict)
     thresholds: dict[str, float] = field(default_factory=lambda: dict(DEFAULT_THRESHOLDS))
     row_summaries: list[dict[str, Any]] = field(default_factory=list)
 
@@ -164,6 +179,7 @@ class BundleManifest:
                 "invocation": self.invocation,
                 "files": self.files,
                 "raw_index": self.raw_index,
+                "row_links": self.row_links,
                 "thresholds": self.thresholds,
                 "row_summaries": self.row_summaries,
             },
@@ -182,6 +198,9 @@ class BundleManifest:
             invocation=dict(data.get("invocation", {})),
             files=dict(data.get("files", {})),
             raw_index=dict(data.get("raw_index", {})),
+            row_links={
+                k: list(v) for k, v in (data.get("row_links") or {}).items()
+            },
             thresholds=dict(data.get("thresholds", {})),
             row_summaries=list(data.get("row_summaries", [])),
         )
@@ -237,6 +256,7 @@ def write_bundle(
     run_json_files: Optional[list[Path]] = None,
     raw_files: Optional[list[Path]] = None,
     raw_index: Optional[dict[str, dict[str, Any]]] = None,
+    known_item_ids: Optional[Iterable[str]] = None,
     thresholds: Optional[dict[str, float]] = None,
     invocation: Optional[dict[str, Any]] = None,
 ) -> Path:
@@ -315,11 +335,23 @@ def write_bundle(
 
     bundle_has_runs = any(rel.startswith("runs/") for rel in written)
 
+    # Collect known row keys from the matrix so raw_index entries can
+    # be cross-checked against actual rows.
+    matrix_dict = matrix.to_dict()
+    known_row_keys: set[str] = {
+        _row_key(row.get("provider") or "", row.get("model") or "")
+        for row in (matrix_dict.get("rows") or [])
+    }
+    known_item_id_set: Optional[set[str]] = (
+        set(known_item_ids) if known_item_ids is not None else None
+    )
+
     # Normalize raw_index keys to the `raw/<filename>` form that
     # matches `files`. Reject dangling entries AND type-check the
     # descriptor fields — stale index entries or wrong-type values
     # would be misleading at review time.
     raw_index_normalized: dict[str, dict[str, Any]] = {}
+    row_links: dict[str, list[str]] = {}
     if raw_index:
         written_raw = {rel for rel in written if rel.startswith("raw/")}
         for key, entry in raw_index.items():
@@ -331,7 +363,47 @@ def write_bundle(
                     f"key is a typo."
                 )
             _validate_raw_index_entry(key, entry)
+
+            # Cross-link item_id against the caller-supplied ID set.
+            # When caller passes None, we skip — the check is opt-in
+            # at call time since not every caller has the items list
+            # handy (e.g. pre-serialized BenchmarkResult JSONs).
+            entry_item_id = entry.get("item_id")
+            if (
+                known_item_id_set is not None
+                and entry_item_id
+                and entry_item_id not in known_item_id_set
+            ):
+                raise BundleError(
+                    f"raw_index[{key!r}].item_id = {entry_item_id!r} is "
+                    f"not in the provided known_item_ids set. Either "
+                    f"the ID is stale or the raw file belongs to a "
+                    f"different dataset."
+                )
+
+            # Cross-link row_key against the matrix. Row-linked raw
+            # files get added to the reverse index so reviewers can
+            # look up "what raw evidence belongs to this row?" in one
+            # lookup.
+            row_key = entry.get("row_key")
+            if row_key:
+                if not isinstance(row_key, str):
+                    raise BundleError(
+                        f"raw_index[{key!r}].row_key must be str "
+                        f"(got {type(row_key).__name__})"
+                    )
+                if row_key not in known_row_keys:
+                    raise BundleError(
+                        f"raw_index[{key!r}].row_key = {row_key!r} "
+                        f"does not match any matrix row. Valid row keys: "
+                        f"{sorted(known_row_keys) or '<none>'}"
+                    )
+                row_links.setdefault(row_key, []).append(normalized)
+
             raw_index_normalized[normalized] = dict(entry)
+
+    # Sort raw_links per row for stability
+    row_links = {k: sorted(v) for k, v in sorted(row_links.items())}
 
     manifest = BundleManifest(
         bundle_version=BUNDLE_VERSION,
@@ -341,8 +413,9 @@ def write_bundle(
         invocation=dict(invocation or {}),
         files=written,
         raw_index=raw_index_normalized,
+        row_links=row_links,
         thresholds=dict(thresholds or DEFAULT_THRESHOLDS),
-        row_summaries=[_row_summary(r) for r in matrix.to_dict()["rows"]],
+        row_summaries=[_row_summary(r) for r in matrix_dict["rows"]],
     )
     (out_dir / MANIFEST_NAME).write_text(manifest.to_json(), encoding="utf-8")
 

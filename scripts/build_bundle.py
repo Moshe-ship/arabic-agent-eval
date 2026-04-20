@@ -337,12 +337,20 @@ def main() -> int:
         )
         print(f"attaching {len(raw_files)} raw evidence file(s) from {args.raw}")
 
+    # Collect every item ID from the input benchmarks so raw_index
+    # item_id cross-checks can validate against the real dataset slice.
+    known_item_ids: set[str] = set()
+    for br in benchmarks:
+        for r in br.results:
+            known_item_ids.add(r.item.id)
+
     bundle_path = write_bundle(
         matrix,
         args.out,
         html=html,
         run_json_files=list(args.run),
         raw_files=raw_files or None,
+        known_item_ids=known_item_ids,
         invocation=invocation,
     )
     print(f"wrote bundle → {bundle_path}")

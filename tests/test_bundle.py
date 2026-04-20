@@ -458,3 +458,115 @@ def test_raw_index_accepts_extra_descriptor_keys(tmp_path: Path):
         json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
     )
     assert manifest.raw_index["raw/a.json"]["custom_field"] == {"nested": True}
+
+
+# ---------- item_id cross-link + row_key linkage ----------
+
+
+def _setup_raw_with_index(tmp_path: Path, raw_index: dict) -> Path:
+    """Build a minimal bundle with a raw/ file and a given raw_index."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    return write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index=raw_index,
+        known_item_ids={"item-1", "item-2"},
+    )
+
+
+def test_raw_index_item_id_validated_against_known_ids(tmp_path: Path):
+    """Item IDs in raw_index must exist in the known_item_ids set."""
+    with pytest.raises(BundleError, match="known_item_ids"):
+        _setup_raw_with_index(tmp_path, {
+            "a.json": {"type": "trace", "item_id": "ghost-item"},
+        })
+
+
+def test_raw_index_item_id_accepted_when_known(tmp_path: Path):
+    out = _setup_raw_with_index(tmp_path, {
+        "a.json": {"type": "trace", "item_id": "item-1"},
+    })
+    manifest, _ = load_bundle(out)
+    assert manifest.raw_index["raw/a.json"]["item_id"] == "item-1"
+
+
+def test_raw_index_item_id_not_checked_when_no_known_ids(tmp_path: Path):
+    """When caller doesn't pass known_item_ids, item_id is accepted
+    as-is (opt-in check)."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace", "item_id": "whatever-id"}},
+        # known_item_ids omitted
+    )
+    manifest, _ = load_bundle(out)
+    assert manifest.raw_index["raw/a.json"]["item_id"] == "whatever-id"
+
+
+def test_raw_index_row_key_validated_against_matrix(tmp_path: Path):
+    """Row keys in raw_index must point at an actual matrix row."""
+    matrix = _minimal_matrix()  # has provider=p, model=m
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="does not match any matrix row"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {"type": "trace", "row_key": "wrong/model"}},
+        )
+
+
+def test_row_links_populated_from_raw_index(tmp_path: Path):
+    """Reverse index: manifest.row_links maps row_key → [raw paths]."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    (raw_src / "b.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={
+            "a.json": {"type": "trace", "row_key": "p/m"},
+            "b.json": {"type": "request", "row_key": "p/m"},
+        },
+    )
+    manifest, _ = load_bundle(out)
+    assert manifest.row_links["p/m"] == ["raw/a.json", "raw/b.json"]
+
+
+def test_row_links_empty_when_no_row_key(tmp_path: Path):
+    """Raw files without row_key do not populate row_links."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace"}},
+    )
+    manifest, _ = load_bundle(out)
+    assert manifest.row_links == {}
+
+
+def test_row_key_must_be_string(tmp_path: Path):
+    """row_key type validation picks up non-string types."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="row_key must be str"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {"row_key": 42}},
+        )
