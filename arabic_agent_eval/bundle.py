@@ -291,12 +291,10 @@ def write_bundle(
         written[name] = _sha256_file(path)
 
     _write_text("matrix.json", matrix_json)
-    # table.md is written below after we've computed row_links — we
-    # need the reverse index to append the "Raw evidence per row"
-    # section. csv and html don't depend on row_links.
+    # table.md AND scorecard.html get the row_links section appended
+    # AFTER we've computed the reverse index (below). csv doesn't
+    # include row_links.
     _write_text("table.csv", csv_text)
-    if html is not None:
-        _write_text("scorecard.html", html)
 
     # Run-source copies — optional but strongly recommended for
     # reproducibility. Sha'd and added to the manifest.
@@ -463,6 +461,39 @@ def write_bundle(
 
     _write_text("table.md", md_text)
 
+    # HTML scorecard gets the same row_links section so reviewers who
+    # prefer the screenshot view see evidence links too. Injected
+    # before the closing </body> tag when one exists; appended
+    # otherwise. Only when html was provided AND row_links is non-empty.
+    if html is not None:
+        if row_links:
+            rows_html = "\n".join(
+                "      <tr><td><code>{rk}</code></td>"
+                "<td>{paths}</td></tr>".format(
+                    rk=row_key,
+                    paths=", ".join(f"<code>{p}</code>" for p in paths),
+                )
+                for row_key, paths in row_links.items()
+            )
+            section = (
+                "<section class=\"row-links\">\n"
+                "  <h2>Raw evidence per row</h2>\n"
+                "  <p>Structured links from each matrix row to its raw "
+                "evidence files (from <code>manifest.row_links</code>).</p>\n"
+                "  <table>\n"
+                "    <thead><tr><th>row</th><th>raw files</th></tr></thead>\n"
+                "    <tbody>\n"
+                + rows_html + "\n"
+                "    </tbody>\n"
+                "  </table>\n"
+                "</section>\n"
+            )
+            if "</body>" in html:
+                html = html.replace("</body>", section + "</body>", 1)
+            else:
+                html = html.rstrip() + "\n" + section
+        _write_text("scorecard.html", html)
+
     manifest = BundleManifest(
         bundle_version=BUNDLE_VERSION,
         scanner_version=scanner_version,
@@ -520,6 +551,33 @@ def load_bundle(path: Path) -> tuple[BundleManifest, dict[str, Any]]:
         raise BundleError(
             f"has_runs={manifest.has_runs} in manifest disagrees with "
             f"actual runs/ files present ({actual_has_runs})"
+        )
+
+    # Guard against row_links drift. Recompute the expected reverse
+    # index from raw_index entries that carry `row_key`. A tampered
+    # manifest could add, remove, or retarget row_links entries
+    # without corresponding raw_index changes; the write path keeps
+    # these in sync, so the loader must verify that invariant still
+    # holds.
+    expected_row_links: dict[str, list[str]] = {}
+    for raw_path, entry in manifest.raw_index.items():
+        if not isinstance(entry, dict):
+            continue
+        row_key = entry.get("row_key")
+        if isinstance(row_key, str) and row_key:
+            expected_row_links.setdefault(row_key, []).append(raw_path)
+    expected_row_links = {
+        k: sorted(v) for k, v in sorted(expected_row_links.items())
+    }
+    stored_row_links = {
+        k: sorted(v) for k, v in sorted(manifest.row_links.items())
+    }
+    if stored_row_links != expected_row_links:
+        raise BundleError(
+            f"row_links drift: manifest stores {stored_row_links!r} but "
+            f"raw_index implies {expected_row_links!r}. Someone edited "
+            f"row_links without the matching raw_index update (or vice "
+            f"versa) — bundle is inconsistent."
         )
 
     # Integrity check

@@ -601,6 +601,35 @@ def test_gate_require_request_config_waives_synthetic(tmp_path: Path):
     assert result.returncode == 0, result.stderr
 
 
+def test_gate_per_provider_require_config_scopes_to_named_providers(tmp_path: Path):
+    """--require-request-config-for openrouter only enforces on
+    openrouter rows. Other providers (test.example in this fixture)
+    remain unrequired."""
+    # _clean_bundle creates a row with provider=p, model=m — the
+    # scoped requirement for "other-provider" should pass since
+    # this row isn't scoped, and the global flag isn't set.
+    bundle = _clean_bundle(tmp_path)
+    result = _run_gate(
+        bundle, "--allow-dirty",
+        "--require-request-config-for", "other-provider",
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_gate_per_provider_require_config_rejects_scoped_provider(tmp_path: Path):
+    """When the row's provider IS in the scoped list, missing
+    request_config fails."""
+    bundle = _clean_bundle(tmp_path)  # provider=p
+    result = _run_gate(
+        bundle, "--allow-dirty",
+        "--require-request-config-for", "p",
+    )
+    assert result.returncode != 0
+    assert "request_config_fingerprint" in result.stderr
+    # Error message mentions the scoped-for flag as the source
+    assert "require-request-config-for" in result.stderr
+
+
 def test_gate_rejects_missing_model_id(tmp_path: Path):
     """Real bundles must carry model_id on every row."""
     bundle = _clean_bundle(tmp_path)

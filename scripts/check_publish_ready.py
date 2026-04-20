@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Iterable, Optional
 
 # Allow running this script directly from a repo checkout without
 # `pip install`. Prepends the repo root so `arabic_agent_eval` imports.
@@ -57,6 +58,7 @@ def check_bundle(
     allow_dirty: bool = False,
     synthetic: bool = False,
     require_request_config: bool = False,
+    require_request_config_for: Optional[Iterable[str]] = None,
     min_non_diagnostic: int = 1,
 ) -> list[str]:
     """Return a list of failure reasons. Empty list == publish-ready.
@@ -182,21 +184,33 @@ def check_bundle(
                         f"...)` before scanning."
                     )
 
-        # Opt-in requirement: when --require-request-config is passed,
-        # every real row must carry a non-empty
+        # Opt-in requirement: when --require-request-config is passed
+        # globally, OR when --require-request-config-for names this
+        # row's provider, the row must carry a non-empty
         # request_config_fingerprint. Useful for provider integrations
         # that always capture non-default temperature / top_p /
         # max_tokens — flags missing telemetry before publish.
         # Synthetic waived.
-        if require_request_config and not synthetic:
+        provider = (row.get("provider") or "").strip()
+        scoped_providers = set(require_request_config_for or [])
+        requires_rc = not synthetic and (
+            require_request_config or provider in scoped_providers
+        )
+        if requires_rc:
             pp_rc = md.get("provider_provenance") or {}
             if not pp_rc.get("request_config_fingerprint"):
+                scope_note = (
+                    " (via --require-request-config-for "
+                    f"{provider!r})"
+                    if provider in scoped_providers and not require_request_config
+                    else ""
+                )
                 reasons.append(
                     f"{label}: request_config_fingerprint is missing or "
-                    f"empty but --require-request-config was passed. "
+                    f"empty but request-config is required{scope_note}. "
                     f"Either capture request_config on the BenchmarkResult "
                     f"(setattr(br, 'request_config', {{...}})) or drop "
-                    f"the flag if this integration doesn't track config."
+                    f"the requirement if this integration doesn't track config."
                 )
 
         # Pair-require request_config_fingerprint ↔ schema_version.
@@ -446,6 +460,16 @@ def main() -> int:
              "max_tokens / top_p — ensures config telemetry isn't "
              "silently missing from a published result.",
     )
+    p.add_argument(
+        "--require-request-config-for", action="append", default=[],
+        metavar="PROVIDER",
+        help="Per-provider scope for request_config enforcement. "
+             "Pass once per provider name (e.g. `--require-request-config-for "
+             "openrouter --require-request-config-for anthropic`) to "
+             "require request_config only on rows from those providers. "
+             "Complements --require-request-config (global); when both "
+             "are set, the requirement applies to every row.",
+    )
     args = p.parse_args()
 
     reasons = check_bundle(
@@ -456,6 +480,7 @@ def main() -> int:
         allow_dirty=args.allow_dirty,
         synthetic=args.synthetic,
         require_request_config=args.require_request_config,
+        require_request_config_for=args.require_request_config_for,
         min_non_diagnostic=args.min_non_diagnostic,
     )
 

@@ -668,3 +668,110 @@ def test_row_links_section_absent_when_no_links(tmp_path: Path):
     out = write_bundle(matrix, tmp_path / "bundle")
     md = (out / "table.md").read_text(encoding="utf-8")
     assert "Raw evidence per row" not in md
+
+
+# ---------- load_bundle verifies row_links derivation ----------
+
+
+def test_load_bundle_rejects_manifest_row_links_drift(tmp_path: Path):
+    """If someone edits manifest.row_links without corresponding
+    raw_index changes, load_bundle must catch the inconsistency."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace", "row_key": "p/m"}},
+    )
+    # Tamper: add a fake row_links entry that doesn't correspond to raw_index
+    manifest_path = out / "MANIFEST.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    data["row_links"]["other/row"] = ["raw/a.json"]
+    manifest_path.write_text(
+        json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    with pytest.raises(BundleError, match="row_links drift"):
+        load_bundle(out)
+
+
+def test_load_bundle_rejects_row_links_removal_drift(tmp_path: Path):
+    """Reverse direction: deleting a row_links entry that raw_index
+    implies must also fail."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace", "row_key": "p/m"}},
+    )
+    manifest_path = out / "MANIFEST.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    # Remove the derived row_links while leaving raw_index.row_key intact
+    data["row_links"] = {}
+    manifest_path.write_text(
+        json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    with pytest.raises(BundleError, match="row_links drift"):
+        load_bundle(out)
+
+
+# ---------- HTML scorecard row_links section ----------
+
+
+def test_html_scorecard_gets_row_links_section(tmp_path: Path):
+    """When html is provided AND row_links is non-empty, the HTML
+    gains a 'Raw evidence per row' section before </body>."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    html_input = (
+        "<!doctype html><html><head></head><body><h1>Scorecard</h1></body></html>"
+    )
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        html=html_input,
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace", "row_key": "p/m"}},
+    )
+    html_out = (out / "scorecard.html").read_text(encoding="utf-8")
+    assert "Raw evidence per row" in html_out
+    assert "<code>p/m</code>" in html_out
+    assert "<code>raw/a.json</code>" in html_out
+    # Injected before </body>
+    assert html_out.index("Raw evidence per row") < html_out.index("</body>")
+
+
+def test_html_scorecard_unchanged_when_no_row_links(tmp_path: Path):
+    """When row_links is empty, the HTML input is written through
+    verbatim (no injected section)."""
+    matrix = _minimal_matrix()
+    html_input = "<html><body>Just the table</body></html>"
+    out = write_bundle(matrix, tmp_path / "bundle", html=html_input)
+    html_out = (out / "scorecard.html").read_text(encoding="utf-8")
+    assert "Raw evidence per row" not in html_out
+    assert html_out == html_input
+
+
+def test_html_scorecard_appends_when_no_body_tag(tmp_path: Path):
+    """HTML without a </body> closing tag still gets the section
+    appended at the end."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    html_input = "<!-- just a fragment --><div>Scorecard</div>"
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        html=html_input,
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "trace", "row_key": "p/m"}},
+    )
+    html_out = (out / "scorecard.html").read_text(encoding="utf-8")
+    assert "Raw evidence per row" in html_out
+    # The original content is preserved
+    assert "<div>Scorecard</div>" in html_out

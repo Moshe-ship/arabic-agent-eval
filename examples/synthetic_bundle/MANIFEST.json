@@ -1,18 +1,18 @@
 {
   "bundle_version": "1",
-  "created_at": "2026-04-20T02:52:43+00:00",
+  "created_at": "2026-04-20T02:58:33+00:00",
   "files": {
-    "matrix.json": "fa581d47a9dead0e218a12850dba26a5bf4c79087d0df83a2ac5e246f1274147",
+    "matrix.json": "a315f112c95d695166c7e77274c389f282fa38b3b45412d863a90b3180d56d33",
     "table.csv": "80ff9458945842ca79424527c1fed4a74f990e7d0b4e75fa5125caf5515625e7",
-    "table.md": "4176eb86fcc1e5d146037a3609bccb87009cebd2b04fe916165efbb71d618d59"
+    "table.md": "82fa7c21f40718e74ed2cba8a4d21b4ba764e798f9aa7f1129d13e7fefc7e296"
   },
   "has_runs": false,
   "invocation": {
-    "built_at": "2026-04-20T02:52:43+00:00",
+    "built_at": "2026-04-20T02:58:33+00:00",
     "generator": "scripts/gen_example_bundle.py",
     "generator_version": "gen_example_bundle/0.2",
     "git_branch": "main",
-    "git_ref": "cb4e91dbd35500f42660cc9beae61cecfd86ff90",
+    "git_ref": "7e10e738873daf3fa26ce28cf6c7b2c3d0af1ffe",
     "note": "Fabricated bundle for format demonstration — NOT a model result.",
     "schema_map_source": "../hurmoz/tool-schemas",
     "synthetic": true
@@ -29,8 +29,8 @@
       "model": "synthetic-v1",
       "n_items": 5,
       "provider": "example",
-      "run_id": "db4bb3f4-f16a-4537-8eed-9e6aeffcdd2d",
-      "scanned_at": "2026-04-20T02:52:43+00:00",
+      "run_id": "dece640e-69c4-42f2-aac2-cf7438c69151",
+      "scanned_at": "2026-04-20T02:58:33+00:00",
       "scanner_version": "mtg-matrix/0.6",
       "schema_bound_arg_count": 12,
       "schema_bound_rate": 1.0,
