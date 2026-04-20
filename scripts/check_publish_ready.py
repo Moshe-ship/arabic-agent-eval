@@ -181,6 +181,24 @@ def check_bundle(
                         f"...)` before scanning."
                     )
 
+        # Pair-require request_config_fingerprint ↔ schema_version.
+        # Either both are stamped or neither is — a fingerprint without
+        # its canonicalization-version pin is ambiguous to compare
+        # later. Applies to all bundles (real and synthetic) since the
+        # invariant is structural.
+        pp_for_pair = md.get("provider_provenance") or {}
+        fp = pp_for_pair.get("request_config_fingerprint")
+        sv = pp_for_pair.get("request_config_schema_version")
+        if (fp and not sv) or (sv and not fp):
+            reasons.append(
+                f"{label}: request_config_fingerprint and "
+                f"request_config_schema_version must be set together or "
+                f"not at all (got fingerprint={fp!r}, "
+                f"schema_version={sv!r}). A fingerprint without its "
+                f"canonicalization-version pin is ambiguous to compare "
+                f"across runs."
+            )
+
         # code_shas must carry a non-empty git SHA for every REQUIRED
         # package. Optional packages (mtg, toolproof) are permitted to
         # be None if they weren't importable at scan time, but the

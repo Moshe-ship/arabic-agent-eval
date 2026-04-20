@@ -824,6 +824,81 @@ def test_request_config_fingerprint_stamps_schema_version():
     assert pp["request_config_schema_version"] == "rcs-v1"
 
 
+# ---------- provider/model normalization ----------
+
+
+def test_normalize_provider_base_url_lowercases_scheme_and_host():
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("https://OpenRouter.AI/API/v1/") == (
+        "https://openrouter.ai/API/v1"
+    )
+    assert normalize_provider_base_url("HTTPS://api.OPENAI.com/v1") == (
+        "https://api.openai.com/v1"
+    )
+
+
+def test_normalize_provider_base_url_strips_trailing_slash():
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url("https://api.x.com/v1/") == "https://api.x.com/v1"
+    # No path — nothing to strip
+    assert normalize_provider_base_url("https://api.x.com") == "https://api.x.com"
+
+
+def test_normalize_provider_base_url_handles_empty():
+    from arabic_agent_eval.matrix import normalize_provider_base_url
+    assert normalize_provider_base_url(None) is None
+    assert normalize_provider_base_url("") is None
+    assert normalize_provider_base_url("   ") is None
+
+
+def test_normalize_model_id_lowercases_and_trims():
+    from arabic_agent_eval.matrix import normalize_model_id
+    assert normalize_model_id("NousResearch/Hermes-4-70B") == "nousresearch/hermes-4-70b"
+    assert normalize_model_id("  GPT-4o-Mini  ") == "gpt-4o-mini"
+    # Internal whitespace collapsed
+    assert normalize_model_id("Claude  Sonnet") == "claude sonnet"
+
+
+def test_normalize_model_id_handles_empty():
+    from arabic_agent_eval.matrix import normalize_model_id
+    assert normalize_model_id(None) is None
+    assert normalize_model_id("") is None
+    assert normalize_model_id("   ") is None
+
+
+def test_provider_provenance_preserves_input_on_normalization():
+    """When normalization changes the caller's value, the original is
+    preserved under *_input so drift is auditable."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    setattr(br, "provider_base_url", "HTTPS://OpenRouter.AI/API/v1/")
+    setattr(br, "model_id", "NousResearch/Hermes-4-70B")
+    row = scan_with_mtg(br)
+    pp = row.run_metadata["provider_provenance"]
+    assert pp["provider_base_url"] == "https://openrouter.ai/API/v1"
+    assert pp["model_id"] == "nousresearch/hermes-4-70b"
+    # Originals preserved because they differed from canonical
+    assert pp["provider_base_url_input"] == "HTTPS://OpenRouter.AI/API/v1/"
+    assert pp["model_id_input"] == "NousResearch/Hermes-4-70B"
+
+
+def test_provider_provenance_no_input_field_when_already_canonical():
+    """When input is already canonical, *_input fields are omitted
+    (keeps the common case clean)."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_result("a", [{"function": "x", "arguments": {"q": "أبي"}}])],
+    )
+    setattr(br, "provider_base_url", "https://api.test.com/v1")
+    setattr(br, "model_id", "test/model-v1")
+    row = scan_with_mtg(br)
+    pp = row.run_metadata["provider_provenance"]
+    assert "provider_base_url_input" not in pp
+    assert "model_id_input" not in pp
+
+
 def test_to_dict_surfaces_ci_and_heuristic_rate():
     br = BenchmarkResult(
         provider="t", model="m",

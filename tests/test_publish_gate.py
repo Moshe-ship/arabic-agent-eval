@@ -496,6 +496,61 @@ def test_gate_rejects_missing_provider_base_url(tmp_path: Path):
     assert "provider_base_url" in result.stderr
 
 
+def test_gate_rejects_fingerprint_without_schema_version(tmp_path: Path):
+    """Pair invariant: fingerprint without schema_version is ambiguous
+    to compare later — gate rejects."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        pp = row["run_metadata"].setdefault("provider_provenance", {})
+        pp["request_config_fingerprint"] = "deadbeef" * 8
+        pp["request_config_schema_version"] = None
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle, "--allow-dirty")
+    assert result.returncode != 0
+    assert "request_config_fingerprint" in result.stderr
+    assert "schema_version" in result.stderr
+
+
+def test_gate_rejects_schema_version_without_fingerprint(tmp_path: Path):
+    """Reverse pair: schema_version without fingerprint is equally
+    suspect — gate rejects."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        pp = row["run_metadata"].setdefault("provider_provenance", {})
+        pp["request_config_fingerprint"] = None
+        pp["request_config_schema_version"] = "rcs-v1"
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    result = _run_gate(bundle, "--allow-dirty")
+    assert result.returncode != 0
+    assert "schema_version" in result.stderr
+
+
 def test_gate_rejects_missing_model_id(tmp_path: Path):
     """Real bundles must carry model_id on every row."""
     bundle = _clean_bundle(tmp_path)

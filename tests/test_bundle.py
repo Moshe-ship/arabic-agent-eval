@@ -377,3 +377,84 @@ def test_raw_index_empty_by_default(tmp_path: Path):
         json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
     )
     assert manifest.raw_index == {}
+
+
+# ---------- raw_index descriptor type validation ----------
+
+
+def test_raw_index_rejects_non_dict_entry(tmp_path: Path):
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="must be a dict"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": "not-a-dict"},  # type: ignore[arg-type]
+        )
+
+
+def test_raw_index_rejects_non_string_type(tmp_path: Path):
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="must be str"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {"type": 42}},
+        )
+
+
+def test_raw_index_rejects_non_bool_redacted(tmp_path: Path):
+    """`redacted` must be bool, not 1/0 — avoids silent coercion."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(BundleError, match="must be bool"):
+        write_bundle(
+            matrix, tmp_path / "bundle",
+            raw_files=list(raw_src.iterdir()),
+            raw_index={"a.json": {"redacted": 1}},
+        )
+
+
+def test_raw_index_accepts_unknown_type_strings(tmp_path: Path):
+    """Unknown `type` values are permitted — new evidence kinds
+    shouldn't require a code change. Only the Python type is checked."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {"type": "custom_kind", "source": "custom"}},
+    )
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.raw_index["raw/a.json"]["type"] == "custom_kind"
+
+
+def test_raw_index_accepts_extra_descriptor_keys(tmp_path: Path):
+    """Extra keys beyond the recognized set are allowed — lets callers
+    add custom fields without code changes."""
+    matrix = _minimal_matrix()
+    raw_src = tmp_path / "src"
+    raw_src.mkdir()
+    (raw_src / "a.json").write_text("{}", encoding="utf-8")
+    out = write_bundle(
+        matrix, tmp_path / "bundle",
+        raw_files=list(raw_src.iterdir()),
+        raw_index={"a.json": {
+            "type": "trace", "custom_field": {"nested": True},
+        }},
+    )
+    manifest = BundleManifest.from_dict(
+        json.loads((out / "MANIFEST.json").read_text(encoding="utf-8"))
+    )
+    assert manifest.raw_index["raw/a.json"]["custom_field"] == {"nested": True}

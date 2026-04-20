@@ -61,6 +61,60 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+# Recognized type values for raw_index descriptors. Not exhaustive —
+# callers can use any string — but these are the conventions used
+# across reviews so unknown strings get a soft warning through docs,
+# not a hard rejection.
+_RAW_INDEX_KNOWN_TYPES: frozenset[str] = frozenset({
+    "provider_output", "request", "response", "trace", "error_log",
+    "system_prompt", "retrieval_context", "tool_output",
+})
+
+
+def _validate_raw_index_entry(key: str, entry: Any) -> None:
+    """Light schema check on a raw_index descriptor. Rejects wrong-type
+    values with BundleError; permits unknown `type` strings (new
+    evidence kinds shouldn't require a code change) but rejects
+    non-string values for recognized keys.
+
+    Known keys and their accepted types:
+    - type:          str (recommended values in _RAW_INDEX_KNOWN_TYPES)
+    - source:        str
+    - redacted:      bool
+    - redaction_note: str
+    - item_id:       str
+    Extra keys are permitted and not type-checked.
+    """
+    if not isinstance(entry, dict):
+        raise BundleError(
+            f"raw_index[{key!r}] must be a dict, got {type(entry).__name__}"
+        )
+    type_expectations: dict[str, type] = {
+        "type": str,
+        "source": str,
+        "redaction_note": str,
+        "item_id": str,
+        "redacted": bool,
+    }
+    for field_name, expected_type in type_expectations.items():
+        if field_name not in entry:
+            continue
+        value = entry[field_name]
+        # `bool` is a subclass of `int` — we want strict bool checks.
+        if expected_type is bool:
+            if not isinstance(value, bool):
+                raise BundleError(
+                    f"raw_index[{key!r}].{field_name} must be bool, "
+                    f"got {type(value).__name__} ({value!r})"
+                )
+        elif not isinstance(value, expected_type):
+            raise BundleError(
+                f"raw_index[{key!r}].{field_name} must be "
+                f"{expected_type.__name__}, got {type(value).__name__} "
+                f"({value!r})"
+            )
+
+
 @dataclass
 class BundleManifest:
     """Structured view of MANIFEST.json."""
@@ -262,8 +316,9 @@ def write_bundle(
     bundle_has_runs = any(rel.startswith("runs/") for rel in written)
 
     # Normalize raw_index keys to the `raw/<filename>` form that
-    # matches `files`. Reject dangling entries — every raw_index key
-    # must correspond to a raw file that was actually written.
+    # matches `files`. Reject dangling entries AND type-check the
+    # descriptor fields — stale index entries or wrong-type values
+    # would be misleading at review time.
     raw_index_normalized: dict[str, dict[str, Any]] = {}
     if raw_index:
         written_raw = {rel for rel in written if rel.startswith("raw/")}
@@ -275,6 +330,7 @@ def write_bundle(
                     f"file in raw/. Either missing from raw_files, or the "
                     f"key is a typo."
                 )
+            _validate_raw_index_entry(key, entry)
             raw_index_normalized[normalized] = dict(entry)
 
     manifest = BundleManifest(

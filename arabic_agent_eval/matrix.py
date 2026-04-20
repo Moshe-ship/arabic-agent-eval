@@ -638,19 +638,78 @@ def _fingerprint_request_config(config: Optional[dict]) -> Optional[str]:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def normalize_provider_base_url(url: Optional[str]) -> Optional[str]:
+    """Canonicalize a provider base URL so cosmetic differences
+    (uppercase scheme, trailing slash) don't split what is logically
+    the same backend across runs.
+
+    Rules:
+    - lowercase the scheme and host
+    - strip trailing slash from the path (but preserve non-trivial
+      path components like `/api/v1`)
+    - strip leading/trailing whitespace
+
+    Empty / None / whitespace-only input → None.
+    """
+    if not url:
+        return None
+    stripped = url.strip()
+    if not stripped:
+        return None
+    if "://" in stripped:
+        scheme, rest = stripped.split("://", 1)
+        scheme = scheme.lower()
+        if "/" in rest:
+            host, path = rest.split("/", 1)
+            host = host.lower()
+            path = "/" + path.rstrip("/")
+            return f"{scheme}://{host}{path}"
+        return f"{scheme}://{rest.lower()}"
+    return stripped.rstrip("/")
+
+
+def normalize_model_id(model_id: Optional[str]) -> Optional[str]:
+    """Canonicalize a model ID for stable cross-run comparison.
+
+    Rules:
+    - strip whitespace
+    - lowercase the whole string (model IDs are case-insensitive in
+      practice across Hugging Face / OpenRouter / Anthropic / OpenAI).
+    - collapse internal whitespace to single spaces.
+
+    Empty / None / whitespace-only input → None.
+    """
+    if not model_id:
+        return None
+    stripped = model_id.strip()
+    if not stripped:
+        return None
+    return " ".join(stripped.lower().split())
+
+
 def _provider_provenance(benchmark_result: "BenchmarkResult") -> dict[str, Any]:
     """Collect provider / request-side provenance. Opt-in: callers set
     attributes on BenchmarkResult via setattr (matching the cost_usd /
     latency_ms pattern). Missing attributes → None entries, so the
     presence or absence of each is always auditable.
 
+    `provider_base_url` and `model_id` are passed through
+    `normalize_provider_base_url` / `normalize_model_id` before
+    stamping. When normalization changes the value, the original input
+    is preserved under `provider_base_url_input` / `model_id_input`
+    so reviewers can see formatting drift between source and canonical.
+
     The fingerprint is paired with `request_config_schema_version` so
     downstream can tell which canonicalization rule produced it."""
-    base_url = getattr(benchmark_result, "provider_base_url", None)
-    model_id = getattr(benchmark_result, "model_id", None)
+    base_url_input = getattr(benchmark_result, "provider_base_url", None)
+    model_id_input = getattr(benchmark_result, "model_id", None)
     request_config = getattr(benchmark_result, "request_config", None)
     fingerprint = _fingerprint_request_config(request_config)
-    return {
+
+    base_url = normalize_provider_base_url(base_url_input)
+    model_id = normalize_model_id(model_id_input)
+
+    out: dict[str, Any] = {
         "provider_base_url": base_url,
         "model_id": model_id,
         "request_config_fingerprint": fingerprint,
@@ -658,6 +717,11 @@ def _provider_provenance(benchmark_result: "BenchmarkResult") -> dict[str, Any]:
             REQUEST_CONFIG_SCHEMA_VERSION if fingerprint is not None else None
         ),
     }
+    if base_url_input and base_url_input != base_url:
+        out["provider_base_url_input"] = base_url_input
+    if model_id_input and model_id_input != model_id:
+        out["model_id_input"] = model_id_input
+    return out
 
 
 def _fingerprint_benchmark_items(benchmark_result: "BenchmarkResult") -> str:
