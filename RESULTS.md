@@ -1,6 +1,6 @@
 # Arabic Agent Eval — April 2026 results (v1)
 
-First public, dated, schema-bound results on the Arabic function-calling
+Public, dated, schema-bound results on the Arabic function-calling
 benchmark. Three canonical bundles committed under `bundles/` and pinned
 by git SHA.
 
@@ -68,7 +68,7 @@ ill-posed without a surface qualifier. Specifically:
 ### Clean — `2026-04-first-seven` (51 items)
 
 GLM leads at 0.839 (B). Chinese open-weights hold 3 of top 4 (GLM,
-MiniMax, Qwen). Every model scores ≥100% on `tool_selection`;
+MiniMax, Qwen). Every model scores 100% on `tool_selection`;
 every model collapses on `error_recovery` (best: 50% for Opus). The
 benchmark's real difficulty is recovering from a failed tool call,
 not picking the right tool the first time.
