@@ -26,11 +26,19 @@ tracked as follow-up work.
 Slugs evaluated:
 - `anthropic/claude-opus-4.7`
 - `openai/gpt-5.4`
-- `google/gemini-2.5-pro`
+- `google/gemini-3.1-pro-preview`
 - `z-ai/glm-5.1`
 - `qwen/qwen3.6-plus`
 - `minimax/minimax-m2.7`
 - `moonshotai/kimi-k2.5`
+
+Note on Gemini: we initially ran `google/gemini-2.5-pro` (the latest
+*stable* Gemini on OpenRouter) and re-ran with `google/gemini-3.1-pro-preview`
+when it was pointed out that the 3.x family — currently in preview —
+is Google's actual frontier. The numbers in this document are the
+3.1 Pro Preview run. The 2.5 Pro run is preserved in git history
+(bundles at commit `54d756f`…`241193b`…`27526d6`) for anyone who
+wants the stable-only comparison.
 
 ## Headline finding
 
@@ -40,12 +48,12 @@ surfaces:
 | Model | Clean | Adversarial | Agentic |
 |---|---:|---:|---:|
 | z-ai/glm-5.1 | **#1** (0.839) | #5 (0.280) | **#1** (avg 0.556) |
-| qwen/qwen3.6-plus | #4 (0.798) | **#1** (0.407) | #5 (avg 0.333) |
-| anthropic/claude-opus-4.7 | #3 (0.803) | #2 (0.342) | #3 (avg 0.333) |
-| minimax/minimax-m2.7 | #2 (0.809) | #3 (0.324) | #2 (avg 0.500) |
-| moonshotai/kimi-k2.5 | #5 (0.634) | #4 (0.320) | #6 (avg 0.278) |
-| openai/gpt-5.4 | #7 (0.543) | #6 (0.243) | #4 (avg 0.389) |
-| google/gemini-2.5-pro | #6 (0.620) | #7 (0.130) | #7 (avg 0.167) |
+| google/gemini-3.1-pro-preview | #2 (0.816) | #6 (0.259) | #6 (avg 0.278) |
+| minimax/minimax-m2.7 | #3 (0.809) | #3 (0.324) | #2 (avg 0.500) |
+| anthropic/claude-opus-4.7 | #4 (0.803) | #2 (0.342) | #3 (avg 0.333) |
+| qwen/qwen3.6-plus | #5 (0.798) | **#1** (0.407) | #5 (avg 0.333) |
+| moonshotai/kimi-k2.5 | #6 (0.634) | #4 (0.320) | #7 (avg 0.278) |
+| openai/gpt-5.4 | #7 (0.543) | #7 (0.243) | #4 (avg 0.389) |
 
 The framing "which model is best at Arabic tool-calling" is
 ill-posed without a surface qualifier. Specifically:
@@ -55,31 +63,33 @@ ill-posed without a surface qualifier. Specifically:
   on adversarial Arabic-specific attacks.
 - **Qwen3.6-plus** flips: best on adversarial handling, middling on
   clean task completion, worst in rank on multi-turn consistency.
+- **Gemini 3.1 Pro Preview** is top-tier on clean (#2, 0.816) but
+  drops into the bottom third on both adversarial and agentic. Strong
+  base Arabic capability, weak under pressure and over multiple turns.
 - **GPT-5.4** posts an F on the clean benchmark (54.3%, lowest multi-
-  step score at 14.3%) but outperforms Qwen and Kimi on agentic
+  step score at 14.3%) but outperforms several models on agentic
   pass^3. Narrow strength, not broad strength.
-- **Gemini 2.5 Pro** is the weakest closed frontier on every surface
-  we measured — 62% clean, 13% adversarial, 16.7% pass^3. On
-  adversarial it made only 7 tool calls across 24 items (vs 22-24
-  for everyone else): partial refusal as a stand-in for handling.
+- **Opus 4.7** is the most consistent closed frontier across all
+  three surfaces (#4 / #2 / #3) — no hero run, no collapse.
 
 ## Per-surface detail
 
 ### Clean — `2026-04-first-seven` (51 items)
 
-GLM leads at 0.839 (B). Chinese open-weights hold 3 of top 4 (GLM,
-MiniMax, Qwen). Every model scores 100% on `tool_selection`;
-every model collapses on `error_recovery` (best: 50% for Opus). The
-benchmark's real difficulty is recovering from a failed tool call,
-not picking the right tool the first time.
+GLM leads at 0.839 (B). Gemini 3.1 Pro Preview lands #2 at 0.816 —
+one of the strongest results in this bundle, though it doesn't
+generalize to the other two tracks. Every model scores 100% on
+`tool_selection`; every model collapses on `error_recovery` (best:
+50% for Opus). The benchmark's real difficulty is recovering from a
+failed tool call, not picking the right tool the first time.
 
 ### Adversarial — `2026-04-adversarial-seven` (24 items)
 
 Targets 8 MTG guard families with one category each. Scores drop
 30-56 points versus clean. Guard rates finally bite: Qwen trips
-8.3% `bidi`, MiniMax 4.5% `homoglyph`, Kimi 4.3% `bidi`. Gemini's
-14.3% violation rate is mostly a function of only making 7 calls —
-it abstained out of most attacks.
+8.3% `bidi`, MiniMax 4.5% `homoglyph`, Kimi 4.3% `bidi`. Gemini
+3.1 Pro Preview made only 7 tool calls across 24 items (vs 22-24
+for everyone else): partial refusal as a stand-in for handling.
 
 Limitations: `script` / `canonicalization` / `dialect_drift` family
 rates are 0% across all models. The current 24-item corpus exercises
@@ -157,9 +167,13 @@ sampling; `pass^k` specifically rewards consistency across replays.
 
 | Bundle | git ref |
 |---|---|
-| clean | `54d756f` |
-| adversarial | `241193b` |
-| agentic | `27526d6` |
+| clean | `60cdf2b` |
+| adversarial | `ab9d4e1` |
+| agentic | `6fcc594` |
+
+(For the original runs against `google/gemini-2.5-pro` instead of
+`google/gemini-3.1-pro-preview`, check out `54d756f` / `241193b` /
+`27526d6` — preserved in git history for the stable-only comparison.)
 
 ## Next
 
