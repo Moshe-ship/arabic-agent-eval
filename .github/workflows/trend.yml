@@ -1,0 +1,100 @@
+name: bundle-trend
+
+# Posts a compact trend summary across every bundle under bundles/**
+# as a sticky PR comment whenever 2+ bundles exist. Complements
+# bundle-diff.yml (pairwise PR diffs) with a running time-series view.
+#
+# Triggers on PRs that touch bundles/ so the comment stays up-to-date
+# when a PR adds a new bundle. No-op when <2 bundles are present.
+
+on:
+  pull_request:
+    paths:
+      - 'bundles/**'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+
+jobs:
+  trend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install aae
+        run: |
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet .
+          python -m pip install --quiet 'mtg-guards @ git+https://github.com/Moshe-ship/mtg.git' || true
+
+      - name: Find bundles sorted by created_at
+        id: find
+        run: |
+          set -e
+          # Collect every bundle directory (has MANIFEST.json)
+          dirs=$(find bundles -maxdepth 2 -type f -name MANIFEST.json \
+                 -exec dirname {} \; 2>/dev/null | sort -u || true)
+          if [ -z "$dirs" ]; then
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          count=$(echo "$dirs" | wc -l | tr -d ' ')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -lt 2 ]; then
+            echo "dirs=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Sort by manifest.created_at so the trend is chronological
+          python - <<'PY' > /tmp/sorted-dirs.txt
+          import json
+          import os
+          from pathlib import Path
+          dirs = []
+          for d in Path("bundles").glob("*/MANIFEST.json"):
+              try:
+                  created = json.loads(d.read_text())["created_at"]
+              except Exception:
+                  continue
+              dirs.append((created, str(d.parent)))
+          for _, path in sorted(dirs):
+              print(path)
+          PY
+          dirs=$(cat /tmp/sorted-dirs.txt)
+          echo "dirs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$dirs" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Compute trend
+        if: steps.find.outputs.count >= 2
+        id: trend
+        run: |
+          set -e
+          dirs=()
+          while IFS= read -r d; do
+            [ -z "$d" ] && continue
+            dirs+=("$d")
+          done <<< "${{ steps.find.outputs.dirs }}"
+          python scripts/trend_bundles.py "${dirs[@]}" --markdown /tmp/trend.md
+          {
+            echo 'body<<EOF'
+            cat /tmp/trend.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post trend as sticky PR comment
+        if: steps.find.outputs.count >= 2
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: bundle-trend
+          message: |
+            ${{ steps.trend.outputs.body }}
+
+            _Automated by `.github/workflows/trend.yml` — ordered by `manifest.created_at`._

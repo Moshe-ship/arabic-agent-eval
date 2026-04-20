@@ -54,14 +54,48 @@ def check_bundle(
     heuristic_max: float,
     allow_diagnostic: bool,
     allow_no_runs: bool = False,
+    allow_dirty: bool = False,
+    synthetic: bool = False,
     min_non_diagnostic: int = 1,
 ) -> list[str]:
-    """Return a list of failure reasons. Empty list == publish-ready."""
+    """Return a list of failure reasons. Empty list == publish-ready.
+
+    Two publish modes:
+
+    - **Real** (default): bundle is a model-evaluation result. Requires
+      runs/, clean code_shas, non-diagnostic rows, and pinned
+      scanner/dataset versions.
+    - **Synthetic** (`--synthetic`): bundle is explicitly marked
+      `invocation.synthetic = true` and is a format example, not a
+      result. Waives runs/ and clean-tree requirements; still requires
+      provenance fields and manifest integrity. The `--synthetic` flag
+      MUST match `invocation.synthetic` — gate rejects mismatches to
+      block "silently synthetic" bundles.
+    """
     reasons: list[str] = []
     try:
         manifest, matrix = load_bundle(path)
     except BundleError as exc:
         return [f"bundle integrity: {exc}"]
+
+    # Synthetic-mode consistency check. Both sides must agree: the
+    # caller passed --synthetic AND the manifest declares
+    # invocation.synthetic=true. Any mismatch means the bundle is
+    # either unmarked or mismarked.
+    if manifest.is_synthetic and not synthetic:
+        reasons.append(
+            "manifest declares `invocation.synthetic: true` but the gate "
+            "was not invoked with --synthetic. Either pass --synthetic to "
+            "publish this bundle as an example, or remove the synthetic "
+            "marker from invocation to publish it as a real result."
+        )
+    if synthetic and not manifest.is_synthetic:
+        reasons.append(
+            "--synthetic was passed but the manifest does not declare "
+            "`invocation.synthetic: true`. The synthetic marker must be "
+            "stamped into the bundle at build time — add `synthetic: true` "
+            "to the invocation dict passed to write_bundle."
+        )
 
     if not manifest.scanner_version:
         reasons.append(
@@ -70,19 +104,19 @@ def check_bundle(
             "with a single scanner_version to produce a publishable bundle"
         )
 
-    # runs/ presence — a bundle without the source run JSONs can't be
-    # reproduced. Require by default; `--allow-no-runs` opts out for
-    # bundles where runs/ is deliberately omitted (e.g. synthetic
-    # example bundles, or bundles that link to runs elsewhere).
+    # runs/ presence — real bundles must carry source run JSONs so the
+    # numbers are reproducible. Synthetic bundles waive this (they
+    # describe no real model call). `--allow-no-runs` overrides for
+    # real bundles when runs are tracked elsewhere.
     has_runs_file = any(
         name.startswith("runs/") for name in manifest.files.keys()
     )
-    if not has_runs_file and not allow_no_runs:
+    if not has_runs_file and not allow_no_runs and not synthetic:
         reasons.append(
-            "bundle has no `runs/` files — published bundles must carry "
-            "the source run JSONs so numbers are reproducible. Pass "
-            "--allow-no-runs to waive (only for synthetic examples or "
-            "when source runs are tracked elsewhere)"
+            "bundle has no `runs/` files — published real bundles must "
+            "carry the source run JSONs so numbers are reproducible. Pass "
+            "--allow-no-runs to waive (when source runs are tracked "
+            "elsewhere) or --synthetic for example bundles."
         )
 
     rows = matrix.get("rows") or []
@@ -116,17 +150,43 @@ def check_bundle(
 
         # code_shas must carry a non-empty git SHA for every REQUIRED
         # package. Optional packages (mtg, toolproof) are permitted to
-        # be None if they weren't importable at scan time, but present
-        # packages must have captured their SHA.
+        # be None if they weren't importable at scan time, but the
+        # REQUIRED set (aae) must always be present.
         code_shas = md.get("code_shas") or {}
         for pkg in REQUIRED_CODE_SHA_PACKAGES:
             sha = code_shas.get(pkg)
             if not sha:
                 reasons.append(
                     f"{label}: code_shas is missing a non-empty SHA for "
-                    f"`{pkg}` — cannot trace this row back to a specific "
-                    f"code revision. Re-run the scan from a git checkout."
+                    f"`{pkg}` (required) — cannot trace this row back "
+                    f"to a specific code revision. Re-run the scan "
+                    f"from a git checkout."
                 )
+
+        # code_clean — for real bundles, the required packages must
+        # have been clean (committed) when the scan ran. A dirty tree
+        # means the code_sha is one commit behind what actually ran.
+        # Synthetic bundles waive this; real bundles override via
+        # --allow-dirty which is surfaced in the reason message.
+        if not synthetic and not allow_dirty:
+            code_clean = md.get("code_clean") or {}
+            for pkg in REQUIRED_CODE_SHA_PACKAGES:
+                clean = code_clean.get(pkg)
+                if clean is False:
+                    reasons.append(
+                        f"{label}: code_clean.{pkg} is false — the scan "
+                        f"ran from a dirty worktree, so the code_sha "
+                        f"doesn't represent the code that actually ran. "
+                        f"Commit/stash and re-scan, or pass --allow-dirty "
+                        f"to publish anyway."
+                    )
+                elif clean is None:
+                    reasons.append(
+                        f"{label}: code_clean.{pkg} is null — cannot "
+                        f"verify whether the scan ran from a clean "
+                        f"checkout. Pass --allow-dirty if this is "
+                        f"deliberate (pip-installed, etc.)."
+                    )
 
         hsr = float(row.get("heuristic_scan_rate", 0.0))
         row_diagnostic = bool(row.get("diagnostic", False))
@@ -224,6 +284,20 @@ def main() -> int:
              "(default 1). Gate always rejects a bundle with zero "
              "schema-grounded rows.",
     )
+    p.add_argument(
+        "--allow-dirty", action="store_true",
+        help="Allow rows whose code_clean.<required-package> is false. "
+             "Use when the scan was intentionally run from a dirty "
+             "checkout. Surfaced in reason messages so the override "
+             "is auditable.",
+    )
+    p.add_argument(
+        "--synthetic", action="store_true",
+        help="Publish as a synthetic example bundle. Waives runs/ and "
+             "clean-tree requirements but requires the manifest to "
+             "declare `invocation.synthetic = true`. --synthetic and "
+             "invocation.synthetic must match — gate rejects mismatches.",
+    )
     args = p.parse_args()
 
     reasons = check_bundle(
@@ -231,6 +305,8 @@ def main() -> int:
         heuristic_max=args.heuristic_max,
         allow_diagnostic=args.allow_diagnostic,
         allow_no_runs=args.allow_no_runs,
+        allow_dirty=args.allow_dirty,
+        synthetic=args.synthetic,
         min_non_diagnostic=args.min_non_diagnostic,
     )
     if not reasons:

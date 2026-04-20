@@ -121,6 +121,16 @@ class BundleManifest:
             row_summaries=list(data.get("row_summaries", [])),
         )
 
+    @property
+    def is_synthetic(self) -> bool:
+        """True when the bundle declares itself synthetic via
+        `invocation.synthetic = true`. Synthetic bundles have a
+        distinct publish path in the gate — they're allowed to skip
+        runs/ presence and clean-tree checks, but they must carry the
+        synthetic flag explicitly so nothing that isn't synthetic can
+        quietly take the synthetic rules."""
+        return bool(self.invocation.get("synthetic", False))
+
 
 class BundleError(ValueError):
     """Raised on malformed or tampered bundles."""

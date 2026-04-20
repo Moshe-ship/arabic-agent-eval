@@ -500,6 +500,35 @@ def _package_version(module_name: str) -> Optional[str]:
         return None
 
 
+def _environment_fingerprint() -> str:
+    """Stable sha256 over the sorted list of every installed
+    distribution name==version in this Python environment.
+
+    Complements the coarse `dependency_versions` dict (which tracks
+    only MTG-stack packages) — the fingerprint captures the full
+    environment so reviewers can tell 'identical environment' from
+    'same MTG-stack versions but different transitive deps'.
+
+    Uses only the distribution name + version — does NOT attempt to
+    hash sdists or lockfiles (a real lockfile-hash primitive is a
+    separate concern for future work). Deterministic given the same
+    importlib.metadata output.
+    """
+    try:
+        from importlib.metadata import distributions
+    except ImportError:  # pragma: no cover
+        return hashlib.sha256(b"").hexdigest()
+    entries: list[str] = []
+    for dist in distributions():
+        name = dist.metadata.get("Name") or dist.name or ""
+        version = dist.version or ""
+        if name:
+            entries.append(f"{name.lower()}=={version}")
+    entries.sort()
+    canonical = "\n".join(entries).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def _environment_provenance() -> dict[str, Any]:
     """Collect Python / OS / dependency-version provenance. Distinct
     from `code_shas` — those are git HEADs, these are "what was
@@ -515,6 +544,7 @@ def _environment_provenance() -> dict[str, Any]:
             pkg: _package_version(pkg)
             for pkg in ("arabic_agent_eval", "mtg", "toolproof")
         },
+        "fingerprint": _environment_fingerprint(),
     }
 
 

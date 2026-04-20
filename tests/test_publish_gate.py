@@ -110,9 +110,11 @@ def _run_gate(bundle: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def test_gate_passes_on_clean_bundle_via_cli(tmp_path: Path):
-    """A schema-bound bundle with runs/ present passes the default gate."""
+    """A schema-bound bundle with runs/ present passes the default gate.
+    --allow-dirty is required here because the dev worktree is
+    typically dirty when running the suite."""
     bundle = _clean_bundle(tmp_path)
-    result = _run_gate(bundle)
+    result = _run_gate(bundle, "--allow-dirty")
     assert result.returncode == 0, result.stderr
     assert "PUBLISH_READY" in result.stdout
 
@@ -122,7 +124,7 @@ def test_gate_fails_when_threshold_exceeded(tmp_path: Path):
     bundle = _heuristic_bundle(tmp_path)
     # Needs --allow-no-runs because the heuristic bundle has no runs/.
     # The heuristic_scan_rate failure is what we want to observe.
-    result = _run_gate(bundle, "--allow-no-runs")
+    result = _run_gate(bundle, "--allow-no-runs", "--allow-dirty")
     assert result.returncode != 0
     assert "heuristic_scan_rate" in result.stderr
 
@@ -138,10 +140,10 @@ def test_allow_diagnostic_alone_rejects_all_diagnostic_bundle(tmp_path: Path):
 
 def test_allow_diagnostic_plus_min_zero_publishes_heuristic(tmp_path: Path):
     """Deliberate override path: --allow-diagnostic + --min-non-diagnostic 0
-    lets a pure-diagnostic bundle through (documented escape hatch)."""
+    + --allow-dirty lets a pure-diagnostic dirty bundle through."""
     bundle = _heuristic_bundle(tmp_path)
     result = _run_gate(
-        bundle, "--allow-no-runs", "--allow-diagnostic",
+        bundle, "--allow-no-runs", "--allow-diagnostic", "--allow-dirty",
         "--min-non-diagnostic", "0",
     )
     assert result.returncode == 0, result.stderr
@@ -221,10 +223,10 @@ def test_gate_allows_no_runs_with_flag(tmp_path: Path):
         json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
     )
     # Default gate: should still fail for missing runs/
-    r1 = _run_gate(bundle)
+    r1 = _run_gate(bundle, "--allow-dirty")
     assert r1.returncode != 0
     # With --allow-no-runs: should pass
-    r2 = _run_gate(bundle, "--allow-no-runs")
+    r2 = _run_gate(bundle, "--allow-no-runs", "--allow-dirty")
     assert r2.returncode == 0, r2.stderr
 
 
@@ -350,10 +352,76 @@ def test_gate_rejects_single_item_with_missing_runs(tmp_path: Path):
     bundle_dir = tmp_path / "solo"
     write_bundle(matrix, bundle_dir)
     # Default gate: fails because no runs/
-    r1 = _run_gate(bundle_dir)
+    r1 = _run_gate(bundle_dir, "--allow-dirty")
     assert r1.returncode != 0
     # With --allow-no-runs: passes
-    r2 = _run_gate(bundle_dir, "--allow-no-runs")
+    r2 = _run_gate(bundle_dir, "--allow-no-runs", "--allow-dirty")
+    assert r2.returncode == 0, r2.stderr
+
+
+def test_gate_requires_synthetic_flag_match(tmp_path: Path):
+    """A manifest marked synthetic requires --synthetic on the gate.
+    No silent-synthetic publishing."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    bundle = write_bundle(
+        matrix, tmp_path / "synth",
+        invocation={"synthetic": True, "generator": "test"},
+    )
+    r1 = _run_gate(bundle, "--allow-no-runs", "--allow-dirty")
+    assert r1.returncode != 0
+    assert "synthetic" in r1.stderr
+    r2 = _run_gate(bundle, "--synthetic")
+    assert r2.returncode == 0, r2.stderr
+
+
+def test_gate_rejects_synthetic_flag_without_manifest_marker(tmp_path: Path):
+    """--synthetic on a bundle without invocation.synthetic must fail.
+    No silent-real bundles publishing under the synthetic waiver."""
+    br = BenchmarkResult(
+        provider="p", model="m",
+        results=[_item("a"), _item("b")],
+    )
+    matrix = build_matrix([br], tool_schema_map=_SCHEMA_MAP)
+    run_src = tmp_path / "src.json"
+    run_src.write_text("{}", encoding="utf-8")
+    bundle = write_bundle(
+        matrix, tmp_path / "real", run_json_files=[run_src],
+        invocation={"generator": "test"},  # no synthetic
+    )
+    result = _run_gate(bundle, "--synthetic")
+    assert result.returncode != 0
+    assert "synthetic" in result.stderr
+
+
+def test_gate_rejects_dirty_via_manifest_edit(tmp_path: Path):
+    """Force code_clean.aae=false and confirm the gate rejects."""
+    bundle = _clean_bundle(tmp_path)
+    matrix_path = bundle / "matrix.json"
+    matrix_data = json.loads(matrix_path.read_text(encoding="utf-8"))
+    for row in matrix_data["rows"]:
+        row["run_metadata"]["code_clean"] = {
+            "arabic_agent_eval": False, "mtg": True, "toolproof": True,
+        }
+    matrix_path.write_text(
+        json.dumps(matrix_data, indent=2, ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    import hashlib
+    new_hash = hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+    manifest_path = bundle / "MANIFEST.json"
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest_data["files"]["matrix.json"] = new_hash
+    manifest_path.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    r1 = _run_gate(bundle)
+    assert r1.returncode != 0
+    assert "code_clean" in r1.stderr
+    r2 = _run_gate(bundle, "--allow-dirty")
     assert r2.returncode == 0, r2.stderr
 
 
@@ -368,7 +436,8 @@ def test_gate_cross_checks_manifest_heuristic_rate(tmp_path: Path):
         s["heuristic_scan_rate"] = 0.0  # lie
     manifest_path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
     result = _run_gate(
-        bundle, "--allow-no-runs", "--allow-diagnostic", "--min-non-diagnostic", "0",
+        bundle, "--allow-no-runs", "--allow-diagnostic",
+        "--allow-dirty", "--min-non-diagnostic", "0",
     )
     assert result.returncode != 0
     assert "manifest heuristic_scan_rate" in result.stderr
