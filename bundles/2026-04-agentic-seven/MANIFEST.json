@@ -1,6 +1,6 @@
 {
   "bundle_version": "agentic-1",
-  "created_at": "2026-04-20T17:57:59.358626+00:00",
+  "created_at": "2026-04-20T18:43:18.857354+00:00",
   "files": {
     "runs/glm-5.1-k3.json": "f33316accb8fefff40517c6fe012f4fd075fd81b2f6277d1bb653b87eaf31223",
     "runs/minimax-m2.7-k3.json": "fd6f8e6e1cbf4bf2fb6a53918e29ea973d508c0a85e09a77d0c6e6a27d28fe42",
@@ -8,16 +8,16 @@
     "runs/gpt-5.4-k3.json": "6c9351442875deb688584e675f19a949b05021fa37f6d401b70ae2b957e25f47",
     "runs/qwen3.6-plus-k3.json": "9b1fdd17c844a1793edcf15f7e4ebc0eb0dbf4a939d5c027292e6bfa005a5fb0",
     "runs/kimi-k2.5-k3.json": "94f11ca6c2fb1c6ca0547f6d20f606aa1f93f0017fa2cb881d3567903ff859ab",
-    "runs/gemini-2.5-pro-k3.json": "c4cca1e459e4ec8eaa491bc3daeaedb2f6403af16bb84d69c19c00527f5efe94",
-    "table.md": "35947f74885f13e92a02335570a443ae366dc624ca5e34932348c8d1455e3cff"
+    "runs/gemini-3.1-pro-preview-k3.json": "21da23586780011c92cbb101e1c1f9dd4153790add0cbd36a42f8f5378daf70b",
+    "table.md": "51b89502b92422ee5cc8e41c1a3fe0535fee92524c0aeee4264dfe8f3074b6be"
   },
   "has_runs": true,
   "invocation": {
-    "built_at": "2026-04-20T17:57:59.358751+00:00",
+    "built_at": "2026-04-20T18:43:18.857492+00:00",
     "generator": "scripts/build_agentic_bundle.py",
     "generator_version": "agentic_bundle/0.1",
     "git_branch": "main",
-    "git_ref": "a4b407d9885c7b72991a5ba398afd4548fe1d07d",
+    "git_ref": "ab9d4e1d9a39464903050eca8a5c457e23850cc2",
     "run_json_sha256": {
       "glm-5.1-k3.json": "f33316accb8fefff40517c6fe012f4fd075fd81b2f6277d1bb653b87eaf31223",
       "minimax-m2.7-k3.json": "fd6f8e6e1cbf4bf2fb6a53918e29ea973d508c0a85e09a77d0c6e6a27d28fe42",
@@ -25,7 +25,7 @@
       "gpt-5.4-k3.json": "6c9351442875deb688584e675f19a949b05021fa37f6d401b70ae2b957e25f47",
       "qwen3.6-plus-k3.json": "9b1fdd17c844a1793edcf15f7e4ebc0eb0dbf4a939d5c027292e6bfa005a5fb0",
       "kimi-k2.5-k3.json": "94f11ca6c2fb1c6ca0547f6d20f606aa1f93f0017fa2cb881d3567903ff859ab",
-      "gemini-2.5-pro-k3.json": "c4cca1e459e4ec8eaa491bc3daeaedb2f6403af16bb84d69c19c00527f5efe94"
+      "gemini-3.1-pro-preview-k3.json": "21da23586780011c92cbb101e1c1f9dd4153790add0cbd36a42f8f5378daf70b"
     },
     "dataset": "episodes.jsonl",
     "dataset_fingerprint": "e3134aceda497b6d081f6003b1974fa40ca630ba5eb9325eb4d540c676ad027d"
@@ -499,12 +499,12 @@
     },
     {
       "provider": "openrouter",
-      "model": "google/gemini-2.5-pro",
-      "model_id": "google/gemini-2.5-pro",
+      "model": "google/gemini-3.1-pro-preview",
+      "model_id": "google/gemini-3.1-pro-preview",
       "provider_base_url": "https://openrouter.ai/api/v1",
       "k": 3,
       "pass_k_rate": 0.1667,
-      "avg_pass_rate": 0.1667,
+      "avg_pass_rate": 0.2778,
       "n_episodes": 6,
       "episodes_passed": 1,
       "per_episode": {
@@ -528,11 +528,11 @@
         },
         "ep_error_recovery_001": {
           "outcomes": [
+            "pass",
             "fail",
-            "fail",
-            "fail"
+            "pass"
           ],
-          "passes": 0,
+          "passes": 2,
           "all_passed": false
         },
         "ep_abstain_001": {
@@ -565,11 +565,11 @@
       },
       "run_metadata": {
         "provider": "openrouter",
-        "model": "google/gemini-2.5-pro",
+        "model": "google/gemini-3.1-pro-preview",
         "provider_base_url": "https://openrouter.ai/api/v1",
         "dataset": "episodes.jsonl",
         "k": 3,
-        "timestamp": "2026-04-20T17:53:22.634627+00:00",
+        "timestamp": "2026-04-20T18:42:24.951025+00:00",
         "source": "openrouter",
         "tier": "agentic"
       }

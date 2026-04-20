@@ -1,13 +1,13 @@
 {
   "provider": "openrouter",
-  "model": "google/gemini-2.5-pro",
-  "model_id": "google/gemini-2.5-pro",
+  "model": "google/gemini-3.1-pro-preview",
+  "model_id": "google/gemini-3.1-pro-preview",
   "provider_base_url": "https://openrouter.ai/api/v1",
   "dataset": "episodes.jsonl",
   "n_episodes": 6,
   "k": 3,
   "pass_k_rate": 0.1667,
-  "avg_pass_rate": 0.1667,
+  "avg_pass_rate": 0.2778,
   "per_episode": {
     "ep_travel_001": {
       "outcomes": [
@@ -29,11 +29,11 @@
     },
     "ep_error_recovery_001": {
       "outcomes": [
+        "pass",
         "fail",
-        "fail",
-        "fail"
+        "pass"
       ],
-      "passes": 0,
+      "passes": 2,
       "all_passed": false
     },
     "ep_abstain_001": {
@@ -78,18 +78,67 @@
       {
         "episode_id": "ep_travel_001",
         "outcome": "fail",
-        "per_turn_calls": [],
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "الخميس القادم"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ],
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "check_in": "الخميس القادم",
+                "city": "دبي",
+                "check_out": "بعد 3 ليال",
+                "guests": 1
+              }
+            }
+          ]
+        ],
         "reasons": [
-          "missing required calls: ['book_flight', 'book_hotel', 'search_flights', 'search_hotels']"
+          "missing required calls: ['book_flight']"
         ],
         "error": null
       },
       {
         "episode_id": "ep_travel_001",
         "outcome": "fail",
-        "per_turn_calls": [],
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_flights",
+              "arguments": {
+                "from_city": "الرياض",
+                "to_city": "دبي",
+                "date": "الخميس القادم"
+              }
+            }
+          ],
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "check_in": "الخميس القادم",
+                "city": "دبي",
+                "check_out": "بعد 3 أيام من الخميس القادم"
+              }
+            }
+          ]
+        ],
         "reasons": [
-          "missing required calls: ['book_flight', 'book_hotel', 'search_flights', 'search_hotels']"
+          "missing required calls: ['book_flight', 'search_hotels']"
         ],
         "error": null
       }
@@ -121,7 +170,7 @@
             {
               "function": "get_weather",
               "arguments": {
-                "city": "جدة"
+                "city": "Jeddah"
               }
             }
           ]
@@ -153,11 +202,26 @@
     "ep_error_recovery_001": [
       {
         "episode_id": "ep_error_recovery_001",
-        "outcome": "fail",
-        "per_turn_calls": [],
-        "reasons": [
-          "missing required calls: ['book_hotel', 'search_hotels']"
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_in": "الجمعة",
+                "check_out": "الأحد"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
         ],
+        "reasons": [],
         "error": null
       },
       {
@@ -171,11 +235,26 @@
       },
       {
         "episode_id": "ep_error_recovery_001",
-        "outcome": "fail",
-        "per_turn_calls": [],
-        "reasons": [
-          "missing required calls: ['book_hotel', 'search_hotels']"
+        "outcome": "pass",
+        "per_turn_calls": [
+          [
+            {
+              "function": "book_hotel",
+              "arguments": {
+                "city": "إسطنبول",
+                "check_out": "الأحد",
+                "check_in": "الجمعة"
+              }
+            }
+          ],
+          [
+            {
+              "function": "search_hotels",
+              "arguments": {}
+            }
+          ]
         ],
+        "reasons": [],
         "error": null
       }
     ],
@@ -262,27 +341,57 @@
       {
         "episode_id": "ep_chaining_001",
         "outcome": "fail",
-        "per_turn_calls": [],
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "Beirut",
+                "cuisine": "Lebanese"
+              }
+            }
+          ]
+        ],
         "reasons": [
-          "missing required calls: ['book_table', 'search_restaurants']"
+          "missing required calls: ['book_table']"
         ],
         "error": null
       },
       {
         "episode_id": "ep_chaining_001",
         "outcome": "fail",
-        "per_turn_calls": [],
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "Beirut",
+                "cuisine": "Lebanese"
+              }
+            }
+          ]
+        ],
         "reasons": [
-          "missing required calls: ['book_table', 'search_restaurants']"
+          "missing required calls: ['book_table']"
         ],
         "error": null
       },
       {
         "episode_id": "ep_chaining_001",
         "outcome": "fail",
-        "per_turn_calls": [],
+        "per_turn_calls": [
+          [
+            {
+              "function": "search_restaurants",
+              "arguments": {
+                "city": "Beirut",
+                "cuisine": "Lebanese"
+              }
+            }
+          ]
+        ],
         "reasons": [
-          "missing required calls: ['book_table', 'search_restaurants']"
+          "missing required calls: ['book_table']"
         ],
         "error": null
       }
@@ -290,11 +399,11 @@
   },
   "run_metadata": {
     "provider": "openrouter",
-    "model": "google/gemini-2.5-pro",
+    "model": "google/gemini-3.1-pro-preview",
     "provider_base_url": "https://openrouter.ai/api/v1",
     "dataset": "episodes.jsonl",
     "k": 3,
-    "timestamp": "2026-04-20T17:53:22.634627+00:00",
+    "timestamp": "2026-04-20T18:42:24.951025+00:00",
     "source": "openrouter",
     "tier": "agentic"
   }
