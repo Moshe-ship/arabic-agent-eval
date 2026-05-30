@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arabic Agent Eval — Leaderboard</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+         max-width: 940px; margin: 3rem auto; padding: 0 1.2rem;
+         background: #fff; color: #111; }
+  @media (prefers-color-scheme: dark) { body { background:#0c0c0c; color:#eaeaea; } }
+  h1 { font-size: 1.5rem; margin-bottom: .2rem; }
+  h2 { font-size: 1.05rem; margin-top: 2.2rem; border-bottom: 1px solid #8884; padding-bottom: .3rem; }
+  a { color: inherit; }
+  .muted { opacity: .6; }
+  table { border-collapse: collapse; width: 100%; margin-top: .6rem; }
+  th, td { text-align: left; padding: .35rem .6rem; border-bottom: 1px solid #8882; }
+  th { font-weight: 600; opacity: .8; }
+  td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:first-child td { font-weight: 600; }
+  footer { margin-top: 2.5rem; font-size: .85rem; }
+</style>
+</head>
+<body>
+  <h1>Arabic Agent Eval — Leaderboard</h1>
+  <p>An open, installable, dialect-split Arabic function-calling benchmark.
+     Measures tool selection, argument extraction, <b>keeping Arabic in arguments
+     instead of transliterating</b>, and dialectal framing.</p>
+  <p class="muted">Real OpenRouter runs, provenance-frozen by git SHA. See RESULTS.md. Adding more models (incl. Hermes via native endpoint) is open work.<br>
+     Bundles: 2026-04-clean-seven (51 items, clean), 2026-04-adversarial-seven (24 items, Arabic guard surface) · updated 2026-04</p>
+
+  <h2>Clean (51 items)</h2><p class='muted'>Tool-call completion across 6 categories.</p><table><tr><th class='r'>#</th><th>model</th><th>provider</th><th class='r'>score</th><th class='r'>95% CI</th><th class='r'>bidi viol</th><th class='r'>dialect drift</th></tr><tr><td class='r'>1</td><td>z-ai/glm-5.1</td><td class='muted'>openrouter</td><td class='r'>0.839</td><td class='r muted'>0.750–0.925</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>2</td><td>google/gemini-3.1-pro-preview</td><td class='muted'>openrouter</td><td class='r'>0.816</td><td class='r muted'>0.730–0.907</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>3</td><td>minimax/minimax-m2.7</td><td class='muted'>openrouter</td><td class='r'>0.809</td><td class='r muted'>0.717–0.888</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>4</td><td>anthropic/claude-opus-4.7</td><td class='muted'>openrouter</td><td class='r'>0.803</td><td class='r muted'>0.700–0.891</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>5</td><td>qwen/qwen3.6-plus</td><td class='muted'>openrouter</td><td class='r'>0.798</td><td class='r muted'>0.711–0.893</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>6</td><td>moonshotai/kimi-k2.5</td><td class='muted'>openrouter</td><td class='r'>0.634</td><td class='r muted'>0.539–0.767</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>7</td><td>openai/gpt-5.4</td><td class='muted'>openrouter</td><td class='r'>0.543</td><td class='r muted'>0.431–0.678</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr></table>
+  <h2>Adversarial (24 items)</h2><p class='muted'>Arabic guard surface: BiDi / homoglyph / UTS #39 / Arabizi / injection / canonicalization / dialect pressure. Lower is expected — hard on purpose.</p><table><tr><th class='r'>#</th><th>model</th><th>provider</th><th class='r'>score</th><th class='r'>95% CI</th><th class='r'>bidi viol</th><th class='r'>dialect drift</th></tr><tr><td class='r'>1</td><td>qwen/qwen3.6-plus</td><td class='muted'>openrouter</td><td class='r'>0.407</td><td class='r muted'>0.234–0.615</td><td class='r'>4.2%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>2</td><td>anthropic/claude-opus-4.7</td><td class='muted'>openrouter</td><td class='r'>0.342</td><td class='r muted'>0.181–0.540</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>3</td><td>minimax/minimax-m2.7</td><td class='muted'>openrouter</td><td class='r'>0.324</td><td class='r muted'>0.169–0.494</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>4</td><td>moonshotai/kimi-k2.5</td><td class='muted'>openrouter</td><td class='r'>0.320</td><td class='r muted'>0.151–0.477</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>5</td><td>z-ai/glm-5.1</td><td class='muted'>openrouter</td><td class='r'>0.280</td><td class='r muted'>0.136–0.526</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>6</td><td>google/gemini-3.1-pro-preview</td><td class='muted'>openrouter</td><td class='r'>0.259</td><td class='r muted'>0.122–0.418</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr>
+<tr><td class='r'>7</td><td>openai/gpt-5.4</td><td class='muted'>openrouter</td><td class='r'>0.243</td><td class='r muted'>0.100–0.404</td><td class='r'>0.0%</td><td class='r'>0.0%</td></tr></table>
+
+  <footer class="muted">
+    Code &amp; data: <a href="https://github.com/Moshe-ship/arabic-agent-eval">github.com/Moshe-ship/arabic-agent-eval</a> ·
+    Dataset: <a href="https://huggingface.co/datasets/Mosescreates/arabic-agent-eval">huggingface.co/datasets/Mosescreates/arabic-agent-eval</a><br>
+    Complementary to arXiv:2601.05101 ("Arabic Prompts with English Tools"); this benchmark uses native Arabic functions and dialect splits.
+    Adding more models — including Hermes via a native endpoint — is open work.
+  </footer>
+</body>
+</html>
