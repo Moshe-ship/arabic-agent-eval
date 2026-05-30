@@ -1,0 +1,139 @@
+{
+  "benchmark": "Arabic Agent Eval",
+  "generated_from": [
+    "2026-04-first-seven (51 items, clean)",
+    "2026-04-adversarial-seven (24 items, Arabic guard surface)"
+  ],
+  "provenance": "Real OpenRouter runs, provenance-frozen by git SHA. See RESULTS.md. Adding more models (incl. Hermes via native endpoint) is open work.",
+  "updated": "2026-04",
+  "clean": [
+    {
+      "model": "z-ai/glm-5.1",
+      "provider": "openrouter",
+      "score": 0.8388,
+      "ci_low": 0.7502,
+      "ci_high": 0.9251,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "provider": "openrouter",
+      "score": 0.8163,
+      "ci_low": 0.7299,
+      "ci_high": 0.9069,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "minimax/minimax-m2.7",
+      "provider": "openrouter",
+      "score": 0.8094,
+      "ci_low": 0.7167,
+      "ci_high": 0.8876,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "anthropic/claude-opus-4.7",
+      "provider": "openrouter",
+      "score": 0.8026,
+      "ci_low": 0.7002,
+      "ci_high": 0.8913,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "qwen/qwen3.6-plus",
+      "provider": "openrouter",
+      "score": 0.7979,
+      "ci_low": 0.7109,
+      "ci_high": 0.8934,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "moonshotai/kimi-k2.5",
+      "provider": "openrouter",
+      "score": 0.6337,
+      "ci_low": 0.5386,
+      "ci_high": 0.7666,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "openai/gpt-5.4",
+      "provider": "openrouter",
+      "score": 0.5427,
+      "ci_low": 0.4312,
+      "ci_high": 0.6782,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    }
+  ],
+  "adversarial": [
+    {
+      "model": "qwen/qwen3.6-plus",
+      "provider": "openrouter",
+      "score": 0.4074,
+      "ci_low": 0.2341,
+      "ci_high": 0.6151,
+      "bidi_violation_rate": 0.0417,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "anthropic/claude-opus-4.7",
+      "provider": "openrouter",
+      "score": 0.3423,
+      "ci_low": 0.1811,
+      "ci_high": 0.5402,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "minimax/minimax-m2.7",
+      "provider": "openrouter",
+      "score": 0.3236,
+      "ci_low": 0.1687,
+      "ci_high": 0.4937,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "moonshotai/kimi-k2.5",
+      "provider": "openrouter",
+      "score": 0.3199,
+      "ci_low": 0.151,
+      "ci_high": 0.4767,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "z-ai/glm-5.1",
+      "provider": "openrouter",
+      "score": 0.2798,
+      "ci_low": 0.1356,
+      "ci_high": 0.5264,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "google/gemini-3.1-pro-preview",
+      "provider": "openrouter",
+      "score": 0.2591,
+      "ci_low": 0.1222,
+      "ci_high": 0.4184,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    },
+    {
+      "model": "openai/gpt-5.4",
+      "provider": "openrouter",
+      "score": 0.2431,
+      "ci_low": 0.1,
+      "ci_high": 0.4035,
+      "bidi_violation_rate": 0.0,
+      "dialect_drift_rate": 0.0
+    }
+  ]
+}

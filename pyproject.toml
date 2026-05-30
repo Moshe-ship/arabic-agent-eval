@@ -1,7 +1,7 @@
 [project]
 name = "arabic-agent-eval"
 version = "0.1.0"
-description = "The first Arabic function-calling benchmark for AI agents, with dialect splits"
+description = "An open, installable Arabic function-calling benchmark for AI agents, with dialect splits"
 requires-python = ">=3.9"
 license = "Apache-2.0"
 authors = [{ name = "Mousa Abumazin" }]

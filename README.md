@@ -1,6 +1,6 @@
 # arabic-agent-eval
 
-**The first Arabic function-calling benchmark**
+**An open, installable, dialect-split Arabic function-calling benchmark**
 
 [![License: Apache 2.0](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE) [![Data: CC-BY-4.0](https://img.shields.io/badge/data-CC--BY--4.0-green.svg)](data/LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-green.svg)](https://python.org)

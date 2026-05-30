@@ -16,7 +16,7 @@ Habibi (Habibullah et al.), CAMeL Tools morphological analyzers, MADAMIRA, and F
 
 ## vs Arabic LLM benchmarks (OALL, HELM-Arabic, ABBL, Silma)
 
-Existing Arabic leaderboards measure **model-level capabilities**: reading comprehension, translation, summarization, cultural knowledge. They do not evaluate **agent-level behavior** — tool selection, argument extraction, multi-step planning. Arabic Agent Eval is the first artifact at the agent tier. It is compatible with any model on those leaderboards and can be run on an existing Arabic LLM ranking to add an agent-behavior column without duplicating existing work.
+Existing Arabic leaderboards measure **model-level capabilities**: reading comprehension, translation, summarization, cultural knowledge. They do not evaluate **agent-level behavior** — tool selection, argument extraction, multi-step planning. Arabic Agent Eval is an open, installable artifact at the agent tier, complementary to the arXiv 2601.05101 line of work (see below). It is compatible with any model on those leaderboards and can be run on an existing Arabic LLM ranking to add an agent-behavior column without duplicating existing work.
 
 ## vs Hermes-Function-Calling (NousResearch)
 

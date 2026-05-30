@@ -34,7 +34,7 @@ configs:
 
 # Arabic Agent Eval — Dataset Card
 
-**The first Arabic function-calling benchmark with dialect splits.**
+**An open, installable Arabic function-calling benchmark with dialect splits.**
 
 ## Dataset summary
 
@@ -115,7 +115,7 @@ See [LICENSES.md](LICENSES.md).
 
 ```bibtex
 @software{arabic_agent_eval_2026,
-  title = {Arabic Agent Eval: The first Arabic function-calling benchmark with dialect splits},
+  title = {Arabic Agent Eval: An open, dialect-split Arabic function-calling benchmark},
   author = {Abumazin, Mousa},
   year = {2026},
   url = {https://github.com/Moshe-ship/arabic-agent-eval}
