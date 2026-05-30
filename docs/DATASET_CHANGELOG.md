@@ -26,8 +26,8 @@ diffing raw items.
 - **Dialects:** MSA, Gulf, Egyptian, Levantine, Maghrebi.
 - **Tools:** 22 in `arabic_agent_eval.functions.FUNCTIONS`, every
   parameter annotated with `x-mtg` blocks.
-- **Notes:** first version to ship a real canonical bundle would cite
-  this tag. No prior versions exist — no delta table.
+- **Notes:** initial canonical bundle for this project. No prior project
+  versions exist — no delta table.
 
 ---
 

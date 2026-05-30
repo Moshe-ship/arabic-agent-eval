@@ -1,7 +1,7 @@
 {
   "benchmark": "Arabic Agent Eval",
   "generated_from": [
-    "2026-04-first-seven (51 items, clean)",
+    "2026-04-clean-seven (51 items, clean)",
     "2026-04-adversarial-seven (24 items, Arabic guard surface)"
   ],
   "provenance": "Real OpenRouter runs, provenance-frozen by git SHA. See RESULTS.md. Adding more models (incl. Hermes via native endpoint) is open work.",

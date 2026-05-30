@@ -9,9 +9,9 @@
 
 ## Why
 
-Run a Gulf Arabic instruction through a frontier model and watch tool-call arguments come back transliterated — `الرياض` becomes `Riyadh`, `أبي أحجز` collapses to MSA. Dialect intent gets ignored. Nobody measures this in public.
+Run a Gulf Arabic instruction through a frontier model and watch tool-call arguments come back transliterated — `الرياض` becomes `Riyadh`, `أبي أحجز` collapses to MSA. Dialect intent gets ignored. Public measurement for Arabic tool use is still thin.
 
-No Arabic function-calling benchmark exists with a published dataset + grader + dialect splits. This is a first pass at one. Claims about cross-language accuracy deltas belong in the matrix you generate with your own keys (see `scripts/build_result_table.py`) — not in this README.
+This benchmark focuses on native Arabic functions, dialect splits, published data, and a reproducible grader. Claims about cross-language accuracy deltas belong in the matrix you generate with your own keys (see `scripts/build_result_table.py`) — not in this README.
 
 51 evaluation items. 6 categories. 5 dialect variants. 22 Arabic-context functions. One score that tells you how well a model actually handles Arabic function calling.
 
